@@ -27,14 +27,14 @@
 
         <form class="d-flex flex-column gap-3" @submit.prevent="onSubmit">
           <div class="field">
-            <label class="label" for="username">Usuario</label>
+            <label class="label" for="identifier">Usuario o correo</label>
             <input
-              id="username"
-              v-model.trim="username"
+              id="identifier"
+              v-model.trim="identifier"
               class="input"
               type="text"
-              autocomplete="username"
-              placeholder="Ingresa tu usuario"
+              autocomplete="username email"
+              placeholder="Ingresa tu usuario o correo"
               :disabled="loading"
               @keydown.enter.prevent="focusPassword"
             />
@@ -90,7 +90,7 @@
           </div>
           <div class="mini">
             <div class="mini-title">Prueba local</div>
-            <div class="mini-value">admin / Admin123*</div>
+            <div class="mini-value">admin o admin@empresa.com / Admin123*</div>
           </div>
         </div>
 
@@ -113,7 +113,7 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const username = ref('admin')
+const identifier = ref('admin')
 const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
@@ -121,7 +121,7 @@ const error = ref('')
 const passwordRef = ref(null)
 
 const canSubmit = computed(() => {
-  return username.value.trim().length > 0 && password.value.length > 0
+  return identifier.value.trim().length > 0 && password.value.length > 0
 })
 
 const toggleShow = () => {
@@ -139,7 +139,7 @@ const onSubmit = async () => {
   loading.value = true
 
   try {
-    await auth.login(username.value, password.value)
+    await auth.login(identifier.value, password.value)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     router.push(redirect)
   } catch (e) {

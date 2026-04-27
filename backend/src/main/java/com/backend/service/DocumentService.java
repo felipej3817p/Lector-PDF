@@ -92,7 +92,9 @@ public class DocumentService {
         }
 
         try {
-            Path uploadPath = Paths.get(documentsDir);
+            Path uploadPath = Paths.get(documentsDir)
+                    .resolve(sanitizePathSegment(uploadedBy))
+                    .resolve(employee.getDocumentNumber() != null ? sanitizePathSegment(employee.getDocumentNumber()) : "sin_documento");
             Files.createDirectories(uploadPath);
 
             String safeOriginalName = sanitizeFileName(originalName);
@@ -138,5 +140,14 @@ public class DocumentService {
 
     private String sanitizeFileName(String fileName) {
         return fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    private String sanitizePathSegment(String value) {
+        String sanitized = String.valueOf(value == null ? "" : value)
+                .replaceAll("[^a-zA-Z0-9._-]", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_+", "")
+                .replaceAll("_+$", "");
+        return sanitized.isBlank() ? "sin_valor" : sanitized;
     }
 }

@@ -37,9 +37,9 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('auth_user')
     },
 
-    async login(username, password) {
+    async login(identifier, password) {
       const { data } = await http.post('/api/auth/login', {
-        username,
+        identifier,
         password
       })
 
@@ -55,7 +55,7 @@ export const useAuthStore = defineStore('auth', {
       }
 
       const user = {
-        username: data?.username || username,
+        username: data?.username || identifier,
         email: data?.email || '',
         roles: Array.isArray(data?.roles) ? data.roles : [],
         allowedAreas: Array.isArray(data?.allowedAreas) ? data.allowedAreas : []

@@ -227,6 +227,103 @@
         </form>
       </div>
     </div>
+
+    <div class="card border-0 mt-4">
+      <div class="card-body">
+        <div class="page-header border-0 pb-0">
+          <div>
+            <h2 class="h4 mb-1">Carga masiva por arrastre</h2>
+            <p class="helper-text mb-0">
+              Arrastra una carpeta o varios PDF. Cada archivo se analiza y se asigna automáticamente por cédula.
+            </p>
+          </div>
+        </div>
+        <div class="hr"></div>
+
+        <div
+          class="dropzone"
+          :class="{ 'dropzone--active': dragActive }"
+          @dragover.prevent="dragActive = true"
+          @dragleave.prevent="dragActive = false"
+          @drop.prevent="handleDrop"
+        >
+          <p class="mb-2"><strong>Suelta aquí los PDF o carpetas</strong></p>
+          <p class="helper-text mb-3">Solo se procesan archivos con extensión .pdf</p>
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <label class="secondary-btn mb-0">
+              Seleccionar PDFs
+              <input
+                class="d-none"
+                type="file"
+                multiple
+                accept="application/pdf,.pdf"
+                :disabled="batchLoading"
+                @change="handleBatchFilesSelect"
+              />
+            </label>
+            <label class="secondary-btn mb-0">
+              Seleccionar carpeta
+              <input
+                class="d-none"
+                type="file"
+                multiple
+                webkitdirectory
+                directory
+                :disabled="batchLoading"
+                @change="handleBatchFilesSelect"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div v-if="batchFiles.length" class="summary-card mt-3">
+          <span class="label">Archivos en cola</span>
+          <span>{{ batchFiles.length }} PDF(s)</span>
+        </div>
+
+        <div class="actions-row mt-3">
+          <button
+            type="button"
+            class="secondary-btn"
+            :disabled="batchLoading || !batchFiles.length"
+            @click="clearBatch"
+          >
+            Limpiar cola
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="batchLoading || !batchFiles.length"
+            @click="submitBatch"
+          >
+            {{ batchLoading ? 'Procesando...' : 'Subir y analizar carga masiva' }}
+          </button>
+        </div>
+
+        <div v-if="batchSummary" class="state-box info mt-3">
+          Total: {{ batchSummary.total }} · Exitosos: {{ batchSummary.success }} · Fallidos: {{ batchSummary.failed }}
+        </div>
+
+        <div v-if="batchResults.length" class="table-responsive mt-3">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Archivo</th>
+                <th>Estado</th>
+                <th>Mensaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, index) in batchResults" :key="`${item.fileName}-${index}`">
+                <td>{{ item.fileName }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.message }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -247,6 +344,11 @@ const error = ref('')
 const successMessage = ref('')
 const employeeSearch = ref('')
 const selectedFile = ref(null)
+const batchFiles = ref([])
+const batchLoading = ref(false)
+const batchResults = ref([])
+const batchSummary = ref(null)
+const dragActive = ref(false)
 const fileInput = ref(null)
 const uploadStepLabel = ref('Subiendo PDF...')
 
@@ -344,6 +446,39 @@ const handleFileChange = (event) => {
   selectedFile.value = file
 }
 
+const normalizeBatchFiles = (files) => {
+  const input = Array.from(files || [])
+  const onlyPdf = input.filter((file) => file?.name?.toLowerCase().endsWith('.pdf'))
+  const existing = new Set(batchFiles.value.map((file) => `${file.name}_${file.size}_${file.lastModified}`))
+  const merged = [...batchFiles.value]
+
+  for (const file of onlyPdf) {
+    const key = `${file.name}_${file.size}_${file.lastModified}`
+    if (!existing.has(key)) {
+      merged.push(file)
+      existing.add(key)
+    }
+  }
+
+  batchFiles.value = merged
+}
+
+const handleBatchFilesSelect = (event) => {
+  normalizeBatchFiles(event.target.files)
+  event.target.value = ''
+}
+
+const handleDrop = (event) => {
+  dragActive.value = false
+  normalizeBatchFiles(event.dataTransfer?.files)
+}
+
+const clearBatch = () => {
+  batchFiles.value = []
+  batchResults.value = []
+  batchSummary.value = null
+}
+
 const validateForm = () => {
   error.value = ''
   successMessage.value = ''
@@ -436,6 +571,39 @@ const handleSubmit = async () => {
   }
 }
 
+const submitBatch = async () => {
+  if (batchLoading.value || !batchFiles.value.length) return
+
+  try {
+    batchLoading.value = true
+    error.value = ''
+    successMessage.value = ''
+    batchResults.value = []
+    batchSummary.value = null
+
+    const formData = new FormData()
+    formData.append('documentType', form.documentType)
+    formData.append('examType', form.examType)
+    batchFiles.value.forEach((file) => formData.append('files', file))
+
+    const { data } = await http.post('/api/documents/upload/batch-auto', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    batchSummary.value = {
+      total: data?.total ?? batchFiles.value.length,
+      success: data?.success ?? 0,
+      failed: data?.failed ?? 0
+    }
+    batchResults.value = Array.isArray(data?.results) ? data.results : []
+    successMessage.value = 'Carga masiva finalizada.'
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'No se pudo completar la carga masiva.'
+  } finally {
+    batchLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadEmployees()
 })
@@ -446,5 +614,18 @@ onMounted(() => {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.dropzone {
+  border: 2px dashed #9ca3af;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  background: #f8fafc;
+}
+
+.dropzone--active {
+  border-color: #2563eb;
+  background: #eff6ff;
 }
 </style>

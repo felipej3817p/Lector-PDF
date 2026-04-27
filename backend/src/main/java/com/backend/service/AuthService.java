@@ -38,14 +38,23 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        String principal = request.resolvePrincipal();
+        if (principal.isBlank()) {
+            throw new IllegalArgumentException("Debes ingresar usuario o correo.");
+        }
+
+        User user = userRepository.findByUsername(principal)
+                .or(() -> userRepository.findByEmail(principal))
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
+                        user.getUsername(),
                         request.getPassword()
                 )
         );
 
-        User user = userRepository.findByUsername(authentication.getName())
+        user = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
 
         Set<String> authorities = user.getRoles()

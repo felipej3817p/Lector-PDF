@@ -2,6 +2,7 @@ package com.backend.controller;
 
 import com.backend.model.ManagedDocument;
 import com.backend.service.DocumentAnalysisService;
+import com.backend.service.DocumentBatchService;
 import com.backend.service.DocumentEmailTemplateService;
 import com.backend.service.DocumentReportPdfService;
 import com.backend.service.DocumentService;
@@ -24,17 +25,20 @@ public class DocumentController {
 
     private final DocumentService documentService;
     private final DocumentAnalysisService documentAnalysisService;
+    private final DocumentBatchService documentBatchService;
     private final DocumentReportPdfService documentReportPdfService;
     private final DocumentEmailTemplateService documentEmailTemplateService;
 
     public DocumentController(
             DocumentService documentService,
             DocumentAnalysisService documentAnalysisService,
+            DocumentBatchService documentBatchService,
             DocumentReportPdfService documentReportPdfService,
             DocumentEmailTemplateService documentEmailTemplateService
     ) {
         this.documentService = documentService;
         this.documentAnalysisService = documentAnalysisService;
+        this.documentBatchService = documentBatchService;
         this.documentReportPdfService = documentReportPdfService;
         this.documentEmailTemplateService = documentEmailTemplateService;
     }
@@ -68,6 +72,33 @@ public class DocumentController {
         );
 
         return ResponseEntity.ok(saved);
+    }
+
+    @PostMapping(value = "/upload/batch-auto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadBatchAuto(
+            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam(value = "documentType", defaultValue = "CONCEPTO_MEDICO") String documentType,
+            @RequestParam(value = "examType", defaultValue = "TRABAJO_EN_ALTURAS") String examType,
+            Authentication authentication
+    ) {
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("Debes adjuntar al menos un archivo PDF.");
+        }
+
+        String uploadedBy = authentication != null ? authentication.getName() : "system";
+        List<Map<String, Object>> results = documentBatchService.uploadAndAnalyze(files, documentType, examType, uploadedBy);
+
+        long successCount = results.stream()
+                .filter(item -> "OK".equals(item.get("status")))
+                .count();
+
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("total", results.size());
+        response.put("success", successCount);
+        response.put("failed", results.size() - successCount);
+        response.put("results", results);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/analyze")
