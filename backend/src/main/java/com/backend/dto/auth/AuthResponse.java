@@ -1,0 +1,73 @@
+package com.backend.dto.auth;
+
+import com.backend.model.AreaCode;
+import com.backend.model.Role;
+
+import java.util.HashSet;
+import java.util.Set;
+
+public class AuthResponse {
+
+    private String token;
+    private String username;
+    private String email;
+    private Set<Role> roles = new HashSet<>();
+    private Set<AreaCode> allowedAreas = new HashSet<>();
+
+    public AuthResponse() {
+    }
+
+    public AuthResponse(
+            String token,
+            String username,
+            String email,
+            Set<Role> roles,
+            Set<AreaCode> allowedAreas
+    ) {
+        this.token = token;
+        this.username = username;
+        this.email = email;
+        this.roles = roles;
+        this.allowedAreas = allowedAreas;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+
+    public Set<AreaCode> getAllowedAreas() {
+        return allowedAreas;
+    }
+
+    public void setAllowedAreas(Set<AreaCode> allowedAreas) {
+        this.allowedAreas = allowedAreas;
+    }
+}
