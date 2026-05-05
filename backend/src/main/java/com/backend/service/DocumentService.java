@@ -112,6 +112,8 @@ public class DocumentService {
             document.setUploadedBy(uploadedBy);
             document.setUploadedAt(LocalDateTime.now());
             document.setProcessingStatus("UPLOADED");
+            document.setReviewStatus("PENDING_REVIEW");
+            document.setNotificationStatus("NOT_PENDING");
             document.setAreaCode(resolvedArea);
 
             return managedDocumentRepository.save(document);

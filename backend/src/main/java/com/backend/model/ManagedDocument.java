@@ -24,108 +24,53 @@ public class ManagedDocument {
     private LocalDateTime uploadedAt;
 
     private String processingStatus;
+    private String reviewStatus;
+    private String reviewComment;
+    private String reviewedBy;
+    private LocalDateTime reviewedAt;
+    private String notificationStatus;
+    private LocalDateTime notificationSentAt;
+    private String notificationError;
 
-    /**
-     * Área heredada del trabajador asociado.
-     */
     private AreaCode areaCode;
 
-    public ManagedDocument() {
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getEmployeeId() {
-        return employeeId;
-    }
-
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
-    }
-
-    public String getDocumentType() {
-        return documentType;
-    }
-
-    public void setDocumentType(String documentType) {
-        this.documentType = documentType;
-    }
-
-    public String getExamType() {
-        return examType;
-    }
-
-    public void setExamType(String examType) {
-        this.examType = examType;
-    }
-
-    public String getOriginalFileName() {
-        return originalFileName;
-    }
-
-    public void setOriginalFileName(String originalFileName) {
-        this.originalFileName = originalFileName;
-    }
-
-    public String getStoredFileName() {
-        return storedFileName;
-    }
-
-    public void setStoredFileName(String storedFileName) {
-        this.storedFileName = storedFileName;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
-
-    public String getContentType() {
-        return contentType;
-    }
-
-    public void setContentType(String contentType) {
-        this.contentType = contentType;
-    }
-
-    public String getUploadedBy() {
-        return uploadedBy;
-    }
-
-    public void setUploadedBy(String uploadedBy) {
-        this.uploadedBy = uploadedBy;
-    }
-
-    public LocalDateTime getUploadedAt() {
-        return uploadedAt;
-    }
-
-    public void setUploadedAt(LocalDateTime uploadedAt) {
-        this.uploadedAt = uploadedAt;
-    }
-
-    public String getProcessingStatus() {
-        return processingStatus;
-    }
-
-    public void setProcessingStatus(String processingStatus) {
-        this.processingStatus = processingStatus;
-    }
-
-    public AreaCode getAreaCode() {
-        return areaCode;
-    }
-
-    public void setAreaCode(AreaCode areaCode) {
-        this.areaCode = areaCode;
-    }
+    public ManagedDocument() {}
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getEmployeeId() { return employeeId; }
+    public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
+    public String getDocumentType() { return documentType; }
+    public void setDocumentType(String documentType) { this.documentType = documentType; }
+    public String getExamType() { return examType; }
+    public void setExamType(String examType) { this.examType = examType; }
+    public String getOriginalFileName() { return originalFileName; }
+    public void setOriginalFileName(String originalFileName) { this.originalFileName = originalFileName; }
+    public String getStoredFileName() { return storedFileName; }
+    public void setStoredFileName(String storedFileName) { this.storedFileName = storedFileName; }
+    public String getFilePath() { return filePath; }
+    public void setFilePath(String filePath) { this.filePath = filePath; }
+    public String getContentType() { return contentType; }
+    public void setContentType(String contentType) { this.contentType = contentType; }
+    public String getUploadedBy() { return uploadedBy; }
+    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
+    public LocalDateTime getUploadedAt() { return uploadedAt; }
+    public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+    public String getProcessingStatus() { return processingStatus; }
+    public void setProcessingStatus(String processingStatus) { this.processingStatus = processingStatus; }
+    public String getReviewStatus() { return reviewStatus; }
+    public void setReviewStatus(String reviewStatus) { this.reviewStatus = reviewStatus; }
+    public String getReviewComment() { return reviewComment; }
+    public void setReviewComment(String reviewComment) { this.reviewComment = reviewComment; }
+    public String getReviewedBy() { return reviewedBy; }
+    public void setReviewedBy(String reviewedBy) { this.reviewedBy = reviewedBy; }
+    public LocalDateTime getReviewedAt() { return reviewedAt; }
+    public void setReviewedAt(LocalDateTime reviewedAt) { this.reviewedAt = reviewedAt; }
+    public String getNotificationStatus() { return notificationStatus; }
+    public void setNotificationStatus(String notificationStatus) { this.notificationStatus = notificationStatus; }
+    public LocalDateTime getNotificationSentAt() { return notificationSentAt; }
+    public void setNotificationSentAt(LocalDateTime notificationSentAt) { this.notificationSentAt = notificationSentAt; }
+    public String getNotificationError() { return notificationError; }
+    public void setNotificationError(String notificationError) { this.notificationError = notificationError; }
+    public AreaCode getAreaCode() { return areaCode; }
+    public void setAreaCode(AreaCode areaCode) { this.areaCode = areaCode; }
 }
