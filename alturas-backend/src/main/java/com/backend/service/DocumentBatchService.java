@@ -41,21 +41,18 @@ public class DocumentBatchService {
         this.batchFacadeService = batchFacadeService;
     }
 
-    public List<Map<String, Object>> uploadAndAnalyze(
+    public Map<String, Object> uploadAndAnalyze(
             List<MultipartFile> files,
             String documentType,
             String examType,
-            String uploadedBy,
-            String batchId,
-            String batchCode
+            String uploadedBy
     ) {
         List<Map<String, Object>> results = new ArrayList<>();
         var batch = batchFacadeService.createBatch(uploadedBy, files != null ? files.size() : 0);
 
         if (files == null || files.isEmpty()) {
             batchFacadeService.completeBatch(batch, results);
-        Map<String,Object> meta = new LinkedHashMap<>(); meta.put("batchId", batch.getId()); meta.put("batchCode", batch.getBatchCode()); meta.put("status", batch.getStatus()); results.add(0,meta);
-        return results;
+            return buildResponse(batch, results);
         }
 
         for (MultipartFile file : files) {
@@ -63,8 +60,22 @@ public class DocumentBatchService {
         }
 
         batchFacadeService.completeBatch(batch, results);
-        Map<String,Object> meta = new LinkedHashMap<>(); meta.put("batchId", batch.getId()); meta.put("batchCode", batch.getBatchCode()); meta.put("status", batch.getStatus()); results.add(0,meta);
-        return results;
+        return buildResponse(batch, results);
+    }
+
+    private Map<String, Object> buildResponse(com.backend.model.DocumentBatch batch, List<Map<String, Object>> results) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("batchId", batch.getId());
+        response.put("batchCode", batch.getBatchCode());
+        response.put("batchStatus", batch.getStatus());
+        response.put("total", batch.getTotalFiles());
+        response.put("success", batch.getSuccessCount());
+        response.put("failed", batch.getFailedCount());
+        response.put("pendingReview", batch.getPendingReviewCount());
+        response.put("apt", batch.getAptCount());
+        response.put("notApt", batch.getNotAptCount());
+        response.put("results", results);
+        return response;
     }
 
     private Map<String, Object> processOneFile(

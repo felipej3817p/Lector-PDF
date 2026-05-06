@@ -99,22 +99,12 @@ public class DocumentController {
 
         String uploadedBy = authentication != null ? authentication.getName() : "system";
 
-        List<Map<String, Object>> results = documentBatchService.uploadAndAnalyze(
+        Map<String, Object> response = documentBatchService.uploadAndAnalyze(
                 files,
                 documentType,
                 examType,
                 uploadedBy
         );
-
-        long successCount = results.stream()
-                .filter(item -> "OK".equals(item.get("status")))
-                .count();
-
-        Map<String, Object> response = new java.util.LinkedHashMap<>();
-        response.put("total", results.size());
-        response.put("success", successCount);
-        response.put("failed", results.size() - successCount);
-        response.put("results", results);
 
         return ResponseEntity.ok(response);
     }
