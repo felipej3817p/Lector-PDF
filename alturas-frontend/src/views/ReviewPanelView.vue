@@ -25,6 +25,10 @@
       {{ error }}
     </div>
 
+    <div v-if="bulkSummary" class="state-box info">
+      Operación masiva completada. {{ JSON.stringify(bulkSummary) }}
+    </div>
+
     <div class="kpi-grid">
       <div class="kpi-card">
         <span class="label">Pendientes de revisión</span>
@@ -148,6 +152,14 @@
           </div>
 
           <div class="form-field">
+            <label class="label" for="batchFilter">Lote</label>
+            <select id="batchFilter" v-model="batchFilter" class="form-select" :disabled="loading">
+              <option value="">Todos</option>
+              <option v-for="batch in batchOptions" :key="batch" :value="batch">{{ batch }}</option>
+            </select>
+          </div>
+
+          <div class="form-field">
             <label class="label" for="zoneFilter">Zona / área</label>
             <select
               id="zoneFilter"
@@ -178,6 +190,18 @@
               Solo se muestran documentos analizados, con resultado APTO o NO APTO, pendientes de revisión.
             </p>
           </div>
+          <div class="header-actions">
+            <input v-model.trim="bulkComment" class="form-control" placeholder="Comentario para acción masiva" style="min-width:260px" />
+            <button type="button" class="secondary-btn" :disabled="!filteredRows.length" @click="toggleSelectVisible">
+              {{ allVisibleSelected ? 'Quitar selección visible' : 'Seleccionar todos visibles' }}
+            </button>
+            <button type="button" class="primary-btn" :disabled="bulkLoading || !selectedIds.length" @click="approveSelected">
+              {{ bulkLoading ? 'Procesando...' : `Aprobar seleccionados (${selectedIds.length})` }}
+            </button>
+            <button type="button" class="secondary-btn danger-btn" :disabled="bulkLoading || !selectedIds.length" @click="rejectSelected">
+              Rechazar seleccionados
+            </button>
+          </div>
         </div>
 
         <div class="hr"></div>
@@ -194,6 +218,7 @@
           <table class="table table-hover align-middle">
             <thead>
               <tr>
+                <th class="text-center"><input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectVisible" /></th>
                 <th>Fecha carga</th>
                 <th>Trabajador</th>
                 <th>Documento</th>
@@ -215,6 +240,7 @@
                 :key="row.id"
                 :class="row.resultStatus === 'NO_APTO' ? 'row-critical' : ''"
               >
+                <td class="text-center"><input type="checkbox" :checked="selectedIds.includes(row.id)" @change="toggleSelected(row.id)" /></td>
                 <td>
                   <div class="date-stack">
                     <strong>{{ row.uploadedDatePart }}</strong>
@@ -272,7 +298,7 @@
               </tr>
 
               <tr v-if="!filteredRows.length">
-                <td colspan="12">
+                <td colspan="13">
                   <div class="state-box m-2">
                     No hay coincidencias con los filtros actuales.
                   </div>
@@ -353,7 +379,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { getDocuments } from '../api/document'
+import { getDocuments, approveBulkDocuments, rejectBulkDocuments } from '../api/document'
 import { getEmployees } from '../api/employee'
 import http from '../api/http'
 
@@ -369,6 +395,11 @@ const resultFilter = ref('')
 const zoneFilter = ref('')
 const reviewFilter = ref('')
 const notificationFilter = ref('')
+const batchFilter = ref('')
+const selectedIds = ref([])
+const bulkComment = ref('')
+const bulkLoading = ref(false)
+const bulkSummary = ref(null)
 
 const normalize = (value) => String(value || '').toLowerCase().trim()
 
@@ -485,6 +516,7 @@ const rows = computed(() => {
         reviewedAt: doc.reviewedAt || '',
         reviewComment: doc.reviewComment || '',
         notificationStatus: doc.notificationStatus || 'NOT_PENDING',
+        batchCode: doc.batchCode || '',
         areaCode: doc.areaCode || employee.areaCode || '',
         resultStatus,
         fullName: employee.fullName,
@@ -525,8 +557,9 @@ const filteredRows = computed(() => {
       row.workArea === zoneFilter.value
     const matchesReview = !reviewFilter.value || row.reviewStatus === reviewFilter.value
     const matchesNotification = !notificationFilter.value || row.notificationStatus === notificationFilter.value
+    const matchesBatch = !batchFilter.value || row.batchCode === batchFilter.value
 
-    if (!matchesResult || !matchesZone || !matchesReview || !matchesNotification) return false
+    if (!matchesResult || !matchesZone || !matchesReview || !matchesNotification || !matchesBatch) return false
 
     if (!term) return true
 
@@ -538,7 +571,8 @@ const filteredRows = computed(() => {
       row.workArea,
       row.zone,
       row.areaCode,
-      row.resultStatus
+      row.resultStatus,
+      row.batchCode
     ]
       .map(normalize)
       .join(' ')
@@ -546,6 +580,51 @@ const filteredRows = computed(() => {
     return haystack.includes(term)
   })
 })
+
+
+const batchOptions = computed(() => {
+  return [...new Set(rows.value.map((r) => r.batchCode).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))
+})
+
+const allVisibleSelected = computed(() => {
+  if (!filteredRows.value.length) return false
+  return filteredRows.value.every((row) => selectedIds.value.includes(row.id))
+})
+
+const toggleSelected = (id) => {
+  if (selectedIds.value.includes(id)) selectedIds.value = selectedIds.value.filter((item) => item !== id)
+  else selectedIds.value = [...selectedIds.value, id]
+}
+
+const toggleSelectVisible = () => {
+  if (allVisibleSelected.value) {
+    selectedIds.value = selectedIds.value.filter((id) => !filteredRows.value.some((row) => row.id === id))
+  } else {
+    const merged = new Set([...selectedIds.value, ...filteredRows.value.map((row) => row.id)])
+    selectedIds.value = [...merged]
+  }
+}
+
+const runBulkAction = async (type) => {
+  if (!selectedIds.value.length) return
+  const actionLabel = type === 'approve' ? 'aprobar' : 'rechazar'
+  if (!window.confirm(`¿Seguro que deseas ${actionLabel} ${selectedIds.value.length} documentos?`)) return
+  try {
+    bulkLoading.value = true
+    const fn = type === 'approve' ? approveBulkDocuments : rejectBulkDocuments
+    const { data } = await fn(selectedIds.value, bulkComment.value || '')
+    bulkSummary.value = data
+    selectedIds.value = []
+    await loadData()
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'No se pudo completar la acción masiva.'
+  } finally {
+    bulkLoading.value = false
+  }
+}
+
+const approveSelected = () => runBulkAction('approve')
+const rejectSelected = () => runBulkAction('reject')
 
 const zoneOptions = computed(() => {
   const zones = new Set()
@@ -577,6 +656,9 @@ const resetFilters = () => {
   zoneFilter.value = ''
   reviewFilter.value = ''
   notificationFilter.value = ''
+  batchFilter.value = ''
+  selectedIds.value = []
+  bulkComment.value = ''
 }
 
 const reviewLabel = (status) => {

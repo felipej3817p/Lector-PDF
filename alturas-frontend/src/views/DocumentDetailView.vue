@@ -193,6 +193,31 @@
         </div>
       </div>
 
+
+
+      <div class="card border-0">
+        <div class="card-body">
+          <div class="page-header border-0 pb-0"><div><h2 class="h4 mb-1">Notificación y trazabilidad de correo</h2></div>
+            <div class="header-actions">
+              <button class="secondary-btn" :disabled="resendLoading || documentData.reviewStatus !== 'APPROVED'" @click="resendEmailAction">
+                {{ resendLoading ? 'Reenviando...' : 'Reenviar correo al trabajador' }}
+              </button>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="summary-grid">
+            <div class="summary-card"><span class="label">Estado correo</span><span :class="notificationClass(documentData.notificationStatus)">{{ notificationLabel(documentData.notificationStatus) }}</span></div>
+            <div class="summary-card"><span class="label">Último envío</span><span>{{ formatDate(documentData.notifiedAt) }}</span></div>
+            <div class="summary-card"><span class="label">Intentos</span><span>{{ emailLogs.length }}</span></div>
+          </div>
+          <div class="table-responsive mt-3" v-if="emailLogs.length">
+            <table class="table table-sm align-middle"><thead><tr><th>Fecha intento</th><th>Estado</th><th>Asunto</th><th>Error</th></tr></thead>
+            <tbody><tr v-for="log in emailLogs" :key="log.id"><td>{{ formatDate(log.attemptedAt || log.createdAt) }}</td><td><span :class="notificationClass(log.status)">{{ notificationLabel(log.status) }}</span></td><td>{{ log.subject || '-' }}</td><td>{{ log.errorMessage || '-' }}</td></tr></tbody></table>
+          </div>
+          <div v-else class="state-box">No hay logs de correo para este documento.</div>
+        </div>
+      </div>
+
       <div v-if="analysisData" class="card border-0">
         <div class="card-body">
           <div class="page-header border-0 pb-0">
@@ -350,6 +375,31 @@
         </div>
       </div>
 
+
+
+      <div class="card border-0">
+        <div class="card-body">
+          <div class="page-header border-0 pb-0"><div><h2 class="h4 mb-1">Notificación y trazabilidad de correo</h2></div>
+            <div class="header-actions">
+              <button class="secondary-btn" :disabled="resendLoading || documentData.reviewStatus !== 'APPROVED'" @click="resendEmailAction">
+                {{ resendLoading ? 'Reenviando...' : 'Reenviar correo al trabajador' }}
+              </button>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="summary-grid">
+            <div class="summary-card"><span class="label">Estado correo</span><span :class="notificationClass(documentData.notificationStatus)">{{ notificationLabel(documentData.notificationStatus) }}</span></div>
+            <div class="summary-card"><span class="label">Último envío</span><span>{{ formatDate(documentData.notifiedAt) }}</span></div>
+            <div class="summary-card"><span class="label">Intentos</span><span>{{ emailLogs.length }}</span></div>
+          </div>
+          <div class="table-responsive mt-3" v-if="emailLogs.length">
+            <table class="table table-sm align-middle"><thead><tr><th>Fecha intento</th><th>Estado</th><th>Asunto</th><th>Error</th></tr></thead>
+            <tbody><tr v-for="log in emailLogs" :key="log.id"><td>{{ formatDate(log.attemptedAt || log.createdAt) }}</td><td><span :class="notificationClass(log.status)">{{ notificationLabel(log.status) }}</span></td><td>{{ log.subject || '-' }}</td><td>{{ log.errorMessage || '-' }}</td></tr></tbody></table>
+          </div>
+          <div v-else class="state-box">No hay logs de correo para este documento.</div>
+        </div>
+      </div>
+
       <div v-if="analysisData" class="card border-0">
         <div class="card-body">
           <div class="page-header border-0 pb-0">
@@ -383,7 +433,9 @@ import {
   approveDocument,
   deleteDocument,
   getDocumentById,
-  rejectDocument
+  rejectDocument,
+  resendDocumentEmail,
+  getDocumentEmailLogs
 } from '../api/document'
 import { getEmployeeById } from '../api/employee'
 import { useAuthStore } from '../stores/auth'
@@ -406,6 +458,8 @@ const reviewComment = ref('')
 const documentData = ref(null)
 const analysisData = ref(null)
 const employeeData = ref(null)
+const emailLogs = ref([])
+const resendLoading = ref(false)
 
 const documentId = computed(() => route.params.id)
 const extractedFields = computed(() => analysisData.value?.extractedFields || {})
@@ -530,6 +584,34 @@ const loadAnalysis = async () => {
   }
 }
 
+
+const loadEmailLogs = async () => {
+  try {
+    const { data } = await getDocumentEmailLogs(documentId.value)
+    emailLogs.value = Array.isArray(data) ? data : []
+  } catch {
+    emailLogs.value = []
+  }
+}
+
+const resendEmailAction = async () => {
+  if (documentData.value?.reviewStatus !== 'APPROVED') {
+    error.value = 'Solo se puede reenviar correo en documentos aprobados.'
+    return
+  }
+  if (!window.confirm('¿Deseas reenviar la notificación al trabajador?')) return
+  try {
+    resendLoading.value = true
+    await resendDocumentEmail(documentId.value)
+    successMessage.value = 'Reenvío ejecutado. Verifica estado en el log.'
+    await loadDetail()
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'No se pudo reenviar el correo.'
+  } finally {
+    resendLoading.value = false
+  }
+}
+
 const loadDetail = async () => {
   try {
     loading.value = true
@@ -542,6 +624,7 @@ const loadDetail = async () => {
 
     await loadEmployee()
     await loadAnalysis()
+    await loadEmailLogs()
   } catch (err) {
     error.value = err?.response?.data?.message || 'No se pudo cargar el detalle del documento.'
     console.error('Error cargando detalle del documento:', err)

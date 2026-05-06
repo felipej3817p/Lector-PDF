@@ -32,3 +32,21 @@ export const downloadConsolidatedExcel = () =>
   })
 
 export const deleteDocument = (id) => http.delete(`/api/documents/${id}`)
+
+export const approveBulkDocuments = (documentIds = [], comment = '') =>
+  http.post('/api/documents/approve-bulk', { documentIds, comment })
+
+export const rejectBulkDocuments = (documentIds = [], comment = '') =>
+  http.post('/api/documents/reject-bulk', { documentIds, comment })
+
+export const resendDocumentEmail = (id) =>
+  http.post(`/api/documents/${id}/resend-email`)
+
+export const getDocumentEmailLogs = (id) =>
+  http.get(`/api/email-logs/document/${id}`)
+
+export const getDocumentBatches = () =>
+  http.get('/api/document-batches')
+
+export const notifyApproverBatch = (id) =>
+  http.post(`/api/document-batches/${id}/notify-approver`)
