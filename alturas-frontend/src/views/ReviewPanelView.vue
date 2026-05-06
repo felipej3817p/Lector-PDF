@@ -134,6 +134,20 @@
           </div>
 
           <div class="form-field">
+            <label class="label" for="reviewFilter">Estado revisión</label>
+            <select id="reviewFilter" v-model="reviewFilter" class="form-select" :disabled="loading">
+              <option value="">Todos</option><option value="PENDING_REVIEW">PENDIENTE</option><option value="APPROVED">APROBADO</option><option value="REJECTED">RECHAZADO</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label class="label" for="notificationFilter">Estado notificación</label>
+            <select id="notificationFilter" v-model="notificationFilter" class="form-select" :disabled="loading">
+              <option value="">Todos</option><option value="NOT_PENDING">NO ENVIADO</option><option value="SENT">ENVIADO</option><option value="FAILED">FALLÓ</option><option value="SKIPPED">OMITIDO</option>
+            </select>
+          </div>
+
+          <div class="form-field">
             <label class="label" for="zoneFilter">Zona / área</label>
             <select
               id="zoneFilter"
@@ -185,7 +199,11 @@
                 <th>Documento</th>
                 <th>Cargo</th>
                 <th>Zona</th>
-                <th>Resultado</th>
+                <th>Resultado médico</th>
+                <th>Estado revisión</th>
+                <th>Estado notificación</th>
+                <th>Fecha aprobación</th>
+                <th>Aprobado por</th>
                 <th>Archivo</th>
                 <th class="text-center">Acción</th>
               </tr>
@@ -230,6 +248,10 @@
                     NO APTO
                   </span>
                 </td>
+                <td><span :class="reviewClass(row.reviewStatus)">{{ reviewLabel(row.reviewStatus) }}</span></td>
+                <td><span :class="notificationClass(row.notificationStatus)">{{ notificationLabel(row.notificationStatus) }}</span></td>
+                <td>{{ formatDate(row.reviewedAt) }}</td>
+                <td>{{ row.reviewedBy || '-' }}</td>
 
                 <td>
                   <span :title="row.originalFileName">
@@ -250,7 +272,7 @@
               </tr>
 
               <tr v-if="!filteredRows.length">
-                <td colspan="8">
+                <td colspan="12">
                   <div class="state-box m-2">
                     No hay coincidencias con los filtros actuales.
                   </div>
@@ -345,6 +367,8 @@ const error = ref('')
 const search = ref('')
 const resultFilter = ref('')
 const zoneFilter = ref('')
+const reviewFilter = ref('')
+const notificationFilter = ref('')
 
 const normalize = (value) => String(value || '').toLowerCase().trim()
 
@@ -499,8 +523,10 @@ const filteredRows = computed(() => {
       row.zone === zoneFilter.value ||
       row.areaCode === zoneFilter.value ||
       row.workArea === zoneFilter.value
+    const matchesReview = !reviewFilter.value || row.reviewStatus === reviewFilter.value
+    const matchesNotification = !notificationFilter.value || row.notificationStatus === notificationFilter.value
 
-    if (!matchesResult || !matchesZone) return false
+    if (!matchesResult || !matchesZone || !matchesReview || !matchesNotification) return false
 
     if (!term) return true
 
@@ -549,6 +575,8 @@ const resetFilters = () => {
   search.value = ''
   resultFilter.value = ''
   zoneFilter.value = ''
+  reviewFilter.value = ''
+  notificationFilter.value = ''
 }
 
 const reviewLabel = (status) => {

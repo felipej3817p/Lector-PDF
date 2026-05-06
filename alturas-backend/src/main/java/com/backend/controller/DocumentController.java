@@ -55,6 +55,11 @@ public class DocumentController {
         return ResponseEntity.ok(documentService.getDocumentById(id));
     }
 
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<List<ManagedDocument>> getByEmployeeId(@PathVariable String employeeId) {
+        return ResponseEntity.ok(documentService.getDocumentsByEmployeeId(employeeId));
+    }
+
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ManagedDocument> upload(
             @RequestParam("employeeId") String employeeId,
