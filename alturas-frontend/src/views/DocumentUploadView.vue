@@ -196,6 +196,11 @@
 
         <div class="summary-grid">
           <div class="summary-card">
+            <span class="label">Código lote</span>
+            <span>{{ batchSummary.batchCode || '-' }}</span>
+          </div>
+
+          <div class="summary-card">
             <span class="label">Total</span>
             <span>{{ batchSummary.total }}</span>
           </div>
@@ -209,6 +214,27 @@
             <span class="label">Fallidos</span>
             <span>{{ batchSummary.failed }}</span>
           </div>
+
+          <div class="summary-card">
+            <span class="label">Pendientes revisión</span>
+            <span>{{ batchSummary.pendingReview || 0 }}</span>
+          </div>
+
+          <div class="summary-card">
+            <span class="label">Aptos</span>
+            <span>{{ batchSummary.apt || 0 }}</span>
+          </div>
+
+          <div class="summary-card">
+            <span class="label">No aptos</span>
+            <span>{{ batchSummary.notApt || 0 }}</span>
+          </div>
+        </div>
+
+        <div class="actions-row mt-3">
+          <RouterLink v-if="batchSummary.batchCode" :to="`/review?batch=${batchSummary.batchCode}`" class="secondary-btn">
+            Ir al panel filtrado por lote
+          </RouterLink>
         </div>
       </div>
     </div>
@@ -411,9 +437,14 @@ const submitBatch = async () => {
     })
 
     batchSummary.value = {
+      batchId: data?.batchId || '',
+      batchCode: data?.batchCode || '',
       total: data?.total ?? batchFiles.value.length,
       success: data?.success ?? 0,
-      failed: data?.failed ?? 0
+      failed: data?.failed ?? 0,
+      pendingReview: data?.pendingReview ?? 0,
+      apt: data?.apt ?? 0,
+      notApt: data?.notApt ?? 0
     }
 
     batchResults.value = Array.isArray(data?.results) ? data.results : []

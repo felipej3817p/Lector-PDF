@@ -378,11 +378,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { getDocuments, approveBulkDocuments, rejectBulkDocuments } from '../api/document'
 import { getEmployees } from '../api/employee'
 import http from '../api/http'
 
+const route = useRoute()
 const documents = ref([])
 const employees = ref([])
 const analysisById = ref({})
@@ -728,6 +729,7 @@ const loadData = async () => {
 }
 
 onMounted(() => {
+  if (route.query.batch) batchFilter.value = String(route.query.batch)
   loadData()
 })
 </script>
