@@ -65,6 +65,18 @@ public class DocumentService {
                 .toList();
     }
 
+
+    public List<ManagedDocument> getDocumentsByEmployeeId(String employeeId) {
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalArgumentException("No se encontró la persona asociada."));
+
+        List<ManagedDocument> documents = managedDocumentRepository.findByEmployeeIdOrderByUploadedAtDesc(employeeId);
+
+        return documents.stream()
+                .peek(document -> accessScopeService.validateAreaAccess(document.getAreaCode()))
+                .toList();
+    }
+
     public ManagedDocument getDocumentById(String id) {
         ManagedDocument document = managedDocumentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Documento no encontrado."));
