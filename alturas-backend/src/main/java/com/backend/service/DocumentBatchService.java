@@ -23,37 +23,47 @@ public class DocumentBatchService {
     private final DocumentAnalysisService documentAnalysisService;
     private final PdfTextExtractorService pdfTextExtractorService;
     private final PdfFieldParserService pdfFieldParserService;
+    private final DocumentBatchFacadeService batchFacadeService;
 
     public DocumentBatchService(
             EmployeeRepository employeeRepository,
             DocumentService documentService,
             DocumentAnalysisService documentAnalysisService,
             PdfTextExtractorService pdfTextExtractorService,
-            PdfFieldParserService pdfFieldParserService
+            PdfFieldParserService pdfFieldParserService,
+            DocumentBatchFacadeService batchFacadeService
     ) {
         this.employeeRepository = employeeRepository;
         this.documentService = documentService;
         this.documentAnalysisService = documentAnalysisService;
         this.pdfTextExtractorService = pdfTextExtractorService;
         this.pdfFieldParserService = pdfFieldParserService;
+        this.batchFacadeService = batchFacadeService;
     }
 
     public List<Map<String, Object>> uploadAndAnalyze(
             List<MultipartFile> files,
             String documentType,
             String examType,
-            String uploadedBy
+            String uploadedBy,
+            String batchId,
+            String batchCode
     ) {
         List<Map<String, Object>> results = new ArrayList<>();
+        var batch = batchFacadeService.createBatch(uploadedBy, files != null ? files.size() : 0);
 
         if (files == null || files.isEmpty()) {
-            return results;
+            batchFacadeService.completeBatch(batch, results);
+        Map<String,Object> meta = new LinkedHashMap<>(); meta.put("batchId", batch.getId()); meta.put("batchCode", batch.getBatchCode()); meta.put("status", batch.getStatus()); results.add(0,meta);
+        return results;
         }
 
         for (MultipartFile file : files) {
-            results.add(processOneFile(file, documentType, examType, uploadedBy));
+            results.add(processOneFile(file, documentType, examType, uploadedBy, batch.getId(), batch.getBatchCode()));
         }
 
+        batchFacadeService.completeBatch(batch, results);
+        Map<String,Object> meta = new LinkedHashMap<>(); meta.put("batchId", batch.getId()); meta.put("batchCode", batch.getBatchCode()); meta.put("status", batch.getStatus()); results.add(0,meta);
         return results;
     }
 
@@ -61,7 +71,9 @@ public class DocumentBatchService {
             MultipartFile file,
             String documentType,
             String examType,
-            String uploadedBy
+            String uploadedBy,
+            String batchId,
+            String batchCode
     ) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("fileName", file != null ? file.getOriginalFilename() : "");
@@ -87,6 +99,8 @@ public class DocumentBatchService {
                     file,
                     uploadedBy
             );
+            saved.setBatchId(batchId); saved.setBatchCode(batchCode);
+            documentService.save(saved);
 
             Map<String, Object> analysis = documentAnalysisService.analyzeDocument(saved.getId());
 

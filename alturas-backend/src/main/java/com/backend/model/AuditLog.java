@@ -1,0 +1,6 @@
+package com.backend.model;
+import org.springframework.data.annotation.Id;import org.springframework.data.mongodb.core.mapping.Document;
+import java.time.LocalDateTime;import java.util.Map;
+@Document(collection="audit_logs")
+public class AuditLog { @Id private String id; private String entityType; private String entityId; private String action; private String performedBy; private LocalDateTime performedAt; private String description; private Map<String,Object> metadata;
+public String getId(){return id;} public void setId(String id){this.id=id;} public String getEntityType(){return entityType;} public void setEntityType(String v){entityType=v;} public String getEntityId(){return entityId;} public void setEntityId(String v){entityId=v;} public String getAction(){return action;} public void setAction(String v){action=v;} public String getPerformedBy(){return performedBy;} public void setPerformedBy(String v){performedBy=v;} public LocalDateTime getPerformedAt(){return performedAt;} public void setPerformedAt(LocalDateTime v){performedAt=v;} public String getDescription(){return description;} public void setDescription(String v){description=v;} public Map<String,Object> getMetadata(){return metadata;} public void setMetadata(Map<String,Object> v){metadata=v;}}

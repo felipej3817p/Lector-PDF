@@ -303,6 +303,26 @@
         </form>
       </div>
     </div>
+
+    <div v-if="isEditMode" class="card border-0 mt-3">
+      <div class="card-body">
+        <div class="page-header border-0 pb-0"><div><h2 class="h4 mb-1">Historial de evaluaciones de trabajo en alturas</h2></div></div>
+        <div class="hr"></div>
+        <div v-if="historyLoading" class="state-box info">Cargando historial...</div>
+        <div v-else-if="!historyRows.length" class="state-box">Sin evaluaciones registradas.</div>
+        <div v-else class="table-responsive">
+          <table class="table table-sm align-middle"><thead><tr>
+            <th>Fecha carga</th><th>Archivo</th><th>Resultado médico</th><th>Estado revisión</th><th>Aprobado por</th><th>Fecha aprobación</th><th>Estado notificación</th><th>Fecha notificación</th><th>Detalle</th>
+          </tr></thead><tbody>
+            <tr v-for="row in historyRows" :key="row.id">
+              <td>{{ formatDate(row.uploadedAt) }}</td><td>{{ row.originalFileName || '-' }}</td><td>{{ row.resultStatus }}</td><td>{{ reviewLabel(row.reviewStatus) }}</td><td>{{ row.reviewedBy || '-' }}</td><td>{{ formatDate(row.reviewedAt) }}</td><td>{{ notificationLabel(row.notificationStatus) }}</td><td>{{ formatDate(row.notifiedAt) }}</td>
+              <td><RouterLink :to="`/documents/${row.id}`" class="secondary-btn">Ver</RouterLink></td>
+            </tr>
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+
   </section>
 </template>
 
@@ -310,6 +330,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { createEmployee, getEmployeeById, updateEmployee } from '../api/employee'
+import { getDocumentsByEmployeeId } from '../api/document'
+import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
@@ -322,6 +344,8 @@ const isEditMode = computed(() => Boolean(employeeId.value))
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
+const historyRows = ref([])
+const historyLoading = ref(false)
 
 const allAreas = [
   'CENTRO',
@@ -378,6 +402,28 @@ const fullNamePreview = computed(() => {
 
   return fullName || 'Sin nombre digitado'
 })
+
+
+const formatDate = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('es-CO')
+}
+
+const reviewLabel = (status) => {
+  if (status === 'PENDING_REVIEW') return 'PENDIENTE'
+  if (status === 'APPROVED') return 'APROBADO'
+  if (status === 'REJECTED') return 'RECHAZADO'
+  return status || '-'
+}
+
+const notificationLabel = (status) => {
+  if (status === 'NOT_PENDING') return 'NO ENVIADO'
+  if (status === 'SENT') return 'ENVIADO'
+  if (status === 'FAILED') return 'FALLÓ'
+  if (status === 'SKIPPED') return 'OMITIDO'
+  return status || '-'
+}
 
 const setFormData = (data = {}) => {
   form.documentType = data.documentType || ''
@@ -472,12 +518,28 @@ const loadEmployee = async () => {
 
     const { data } = await getEmployeeById(employeeId.value)
     setFormData(data)
+    await loadHistory()
   } catch (err) {
     error.value = 'No se pudo cargar la persona.'
     console.error('Error cargando persona:', err)
   } finally {
     loading.value = false
   }
+}
+
+
+const loadHistory = async () => {
+  if (!isEditMode.value) return
+  try {
+    historyLoading.value = true
+    const { data } = await getDocumentsByEmployeeId(employeeId.value)
+    const docs = Array.isArray(data) ? data : []
+    const analysisReq = await Promise.allSettled(docs.map((d) => http.get(`/api/documents/${d.id}/analysis`)))
+    historyRows.value = docs.map((doc, idx) => {
+      const analysis = analysisReq[idx]?.status === 'fulfilled' ? analysisReq[idx].value.data : null
+      return { ...doc, resultStatus: ['APTO','NO_APTO'].includes(analysis?.resultStatus) ? analysis.resultStatus : 'PENDIENTE' }
+    })
+  } finally { historyLoading.value = false }
 }
 
 const resetForm = () => {

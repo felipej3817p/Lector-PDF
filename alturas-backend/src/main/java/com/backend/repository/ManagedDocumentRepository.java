@@ -14,4 +14,5 @@ public interface ManagedDocumentRepository extends MongoRepository<ManagedDocume
     List<ManagedDocument> findByEmployeeIdOrderByUploadedAtDesc(String employeeId);
 
     List<ManagedDocument> findByAreaCodeIn(Collection<AreaCode> areaCodes);
+    List<ManagedDocument> findByBatchIdOrderByUploadedAtDesc(String batchId);
 }

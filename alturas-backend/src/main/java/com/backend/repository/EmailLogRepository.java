@@ -16,4 +16,5 @@ public interface EmailLogRepository extends MongoRepository<EmailLog, String> {
     List<EmailLog> findByDocumentId(String documentId);
 
     List<EmailLog> findByEmployeeId(String employeeId);
+    List<EmailLog> findByBatchId(String batchId);
 }

@@ -34,6 +34,12 @@ public class EmailSendService {
 
     @Value("${spring.mail.username:}")
     private String from;
+    @Value("${app.email.approver-to:}")
+    private String approverTo;
+    @Value("${app.email.approver-cc:}")
+    private String approverCc;
+    @Value("${app.frontend.base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
 
     public EmailSendService(
             JavaMailSender mailSender,
@@ -96,6 +102,8 @@ public class EmailSendService {
 
         EmailLog log = buildBaseLog(document, employee, analysis);
         log.setTo(to);
+        log.setType("WORKER_NOTIFICATION");
+        log.setAttemptedAt(LocalDateTime.now());
         log.setCc(cc);
         log.setSubject(subject);
         log.setBody(body);
@@ -127,6 +135,41 @@ public class EmailSendService {
         } catch (MailException ex) {
             log.setStatus("FAILED");
             log.setErrorMessage(ex.getMessage());
+            return emailLogRepository.save(log);
+        }
+    }
+
+
+    public EmailLog resendAnalysisEmail(String documentId) {
+        return sendAnalysisEmail(documentId);
+    }
+
+    public EmailLog sendBatchSummaryEmail(String batchId) {
+        EmailLog log = new EmailLog();
+        log.setBatchId(batchId);
+        log.setType("APPROVER_BATCH_NOTIFICATION");
+        log.setAttemptedAt(LocalDateTime.now());
+        log.setCreatedAt(LocalDateTime.now());
+        if (safe(approverTo).isBlank()) {
+            log.setStatus("SKIPPED");
+            log.setErrorMessage("Sin destinatarios configurados en app.email.approver-to");
+            return emailLogRepository.save(log);
+        }
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            if (!safe(from).isBlank()) message.setFrom(from.trim());
+            message.setTo(splitRecipients(approverTo));
+            String[] ccRecipients = splitRecipients(approverCc);
+            if (ccRecipients.length > 0) message.setCc(ccRecipients);
+            message.setSubject("Nueva carga masiva pendiente de aprobación");
+            message.setText("Se registró una carga masiva. Lote: " + batchId + "
+Panel: " + frontendBaseUrl + "/review?batchId=" + batchId);
+            mailSender.send(message);
+            log.setTo(approverTo); log.setCc(approverCc); log.setSubject(message.getSubject()); log.setBody(message.getText());
+            log.setStatus("SENT"); log.setSentAt(LocalDateTime.now());
+            return emailLogRepository.save(log);
+        } catch (MailException ex) {
+            log.setStatus("FAILED"); log.setErrorMessage(ex.getMessage());
             return emailLogRepository.save(log);
         }
     }

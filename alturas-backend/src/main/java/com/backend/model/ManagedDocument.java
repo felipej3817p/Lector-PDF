@@ -56,6 +56,8 @@ public class ManagedDocument {
     private LocalDateTime notifiedAt;
 
     private AreaCode areaCode;
+    private String batchId;
+    private String batchCode;
 
     public ManagedDocument() {
     }
@@ -200,7 +202,7 @@ public class ManagedDocument {
         this.notifiedAt = notifiedAt;
     }
 
-    public void setAreaCode(AreaCode areaCode) {
-        this.areaCode = areaCode;
-    }
+    public void setAreaCode(AreaCode areaCode) { this.areaCode = areaCode; }
+    public String getBatchId(){return batchId;} public void setBatchId(String batchId){this.batchId=batchId;}
+    public String getBatchCode(){return batchCode;} public void setBatchCode(String batchCode){this.batchCode=batchCode;}
 }

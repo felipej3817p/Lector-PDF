@@ -12,7 +12,12 @@ public class EmailLog {
     private String id;
 
     private String documentId;
+    private String batchId;
     private String employeeId;
+    private String type;
+    private String triggeredBy;
+    private String retryOfEmailLogId;
+    private LocalDateTime attemptedAt;
     private String employeeDocumentNumber;
 
     private String to;
@@ -135,4 +140,14 @@ public class EmailLog {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+    public String getBatchId() { return batchId; }
+    public void setBatchId(String batchId) { this.batchId = batchId; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public String getTriggeredBy() { return triggeredBy; }
+    public void setTriggeredBy(String triggeredBy) { this.triggeredBy = triggeredBy; }
+    public String getRetryOfEmailLogId() { return retryOfEmailLogId; }
+    public void setRetryOfEmailLogId(String retryOfEmailLogId) { this.retryOfEmailLogId = retryOfEmailLogId; }
+    public LocalDateTime getAttemptedAt() { return attemptedAt; }
+    public void setAttemptedAt(LocalDateTime attemptedAt) { this.attemptedAt = attemptedAt; }
 }

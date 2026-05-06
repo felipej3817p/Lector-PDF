@@ -1,6 +1,8 @@
 package com.backend.controller;
 
 import com.backend.dto.document.DocumentReviewRequest;
+import com.backend.dto.document.BulkReviewRequest;
+import com.backend.service.EmailSendService;
 import com.backend.model.ManagedDocument;
 import com.backend.service.DocumentAnalysisService;
 import com.backend.service.DocumentBatchService;
@@ -30,19 +32,22 @@ public class DocumentController {
     private final DocumentBatchService documentBatchService;
     private final DocumentReportPdfService documentReportPdfService;
     private final DocumentEmailTemplateService documentEmailTemplateService;
+    private final EmailSendService emailSendService;
 
     public DocumentController(
             DocumentService documentService,
             DocumentAnalysisService documentAnalysisService,
             DocumentBatchService documentBatchService,
             DocumentReportPdfService documentReportPdfService,
-            DocumentEmailTemplateService documentEmailTemplateService
+            DocumentEmailTemplateService documentEmailTemplateService,
+            EmailSendService emailSendService
     ) {
         this.documentService = documentService;
         this.documentAnalysisService = documentAnalysisService;
         this.documentBatchService = documentBatchService;
         this.documentReportPdfService = documentReportPdfService;
         this.documentEmailTemplateService = documentEmailTemplateService;
+        this.emailSendService = emailSendService;
     }
 
     @GetMapping
@@ -53,6 +58,11 @@ public class DocumentController {
     @GetMapping("/{id}")
     public ResponseEntity<ManagedDocument> getById(@PathVariable String id) {
         return ResponseEntity.ok(documentService.getDocumentById(id));
+    }
+
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<List<ManagedDocument>> getByEmployeeId(@PathVariable String employeeId) {
+        return ResponseEntity.ok(documentService.getDocumentsByEmployeeId(employeeId));
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -133,6 +143,22 @@ public class DocumentController {
             @Valid @RequestBody DocumentReviewRequest request
     ) {
         return ResponseEntity.ok(documentService.rejectReview(id, request.getComment()));
+    }
+
+
+    @PostMapping("/approve-bulk")
+    public ResponseEntity<Map<String, Object>> approveBulk(@RequestBody BulkReviewRequest request) {
+        return ResponseEntity.ok(documentService.approveBulk(request.getDocumentIds(), request.getComment()));
+    }
+
+    @PostMapping("/reject-bulk")
+    public ResponseEntity<Map<String, Object>> rejectBulk(@RequestBody BulkReviewRequest request) {
+        return ResponseEntity.ok(documentService.rejectBulk(request.getDocumentIds(), request.getComment()));
+    }
+
+    @PostMapping("/{id}/resend-email")
+    public ResponseEntity<?> resendEmail(@PathVariable String id) {
+        return ResponseEntity.ok(emailSendService.resendAnalysisEmail(id));
     }
 
     @GetMapping("/{id}/report")

@@ -20,6 +20,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -62,6 +63,18 @@ public class DocumentService {
                                 Comparator.nullsLast(Comparator.naturalOrder())
                         ).reversed()
                 )
+                .toList();
+    }
+
+
+    public List<ManagedDocument> getDocumentsByEmployeeId(String employeeId) {
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalArgumentException("No se encontró la persona asociada."));
+
+        List<ManagedDocument> documents = managedDocumentRepository.findByEmployeeIdOrderByUploadedAtDesc(employeeId);
+
+        return documents.stream()
+                .peek(document -> accessScopeService.validateAreaAccess(document.getAreaCode()))
                 .toList();
     }
 
@@ -213,6 +226,25 @@ public class DocumentService {
         document.setNotificationStatus("SKIPPED");
 
         return managedDocumentRepository.save(document);
+    }
+
+
+    public Map<String, Object> approveBulk(List<String> documentIds, String comment) {
+        accessScopeService.assertCanReviewDocuments();
+        int approved = 0; int failed = 0;
+        List<Map<String,String>> errors = new java.util.ArrayList<>();
+        for (String id : documentIds) {
+            try { approveAndNotify(id, comment); approved++; }
+            catch (Exception ex) { failed++; Map<String,String> e=new java.util.LinkedHashMap<>(); e.put("documentId", id); e.put("error", ex.getMessage()); errors.add(e);} }
+        Map<String,Object> out = new java.util.LinkedHashMap<>(); out.put("total", documentIds.size()); out.put("approved", approved); out.put("failed", failed); out.put("errors", errors); return out;
+    }
+
+    public Map<String, Object> rejectBulk(List<String> documentIds, String comment) {
+        accessScopeService.assertCanReviewDocuments();
+        int rejected = 0; int failed = 0;
+        List<Map<String,String>> errors = new java.util.ArrayList<>();
+        for (String id : documentIds) { try { rejectReview(id, comment); rejected++; } catch (Exception ex) { failed++; Map<String,String> e=new java.util.LinkedHashMap<>(); e.put("documentId", id); e.put("error", ex.getMessage()); errors.add(e);} }
+        Map<String,Object> out = new java.util.LinkedHashMap<>(); out.put("total", documentIds.size()); out.put("rejected", rejected); out.put("failed", failed); out.put("errors", errors); return out;
     }
 
     public void deleteDocument(String id) {
