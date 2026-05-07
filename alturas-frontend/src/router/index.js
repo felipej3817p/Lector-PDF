@@ -81,14 +81,14 @@ const router = createRouter({
       path: '/documents',
       name: 'documents',
       component: DocumentsListView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: { requiresAuth: true, requiresSuperAdmin: true }
     },
 
     {
       path: '/documents/upload',
       name: 'document-upload',
       component: DocumentUploadView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: { requiresAuth: true, requiresSuperAdmin: true }
     },
 
     {
@@ -102,14 +102,14 @@ const router = createRouter({
       path: '/employees',
       name: 'employees',
       component: EmployeeListView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: { requiresAuth: true, requiresSuperAdmin: true }
     },
 
     {
       path: '/employees/new',
       name: 'employee-create',
       component: EmployeeFormView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: { requiresAuth: true, requiresSuperAdmin: true }
     },
 
     {
@@ -123,7 +123,7 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingsView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: { requiresAuth: true, requiresSuperAdmin: true }
     },
 
     {

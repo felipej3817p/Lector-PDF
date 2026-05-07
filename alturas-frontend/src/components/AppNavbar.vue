@@ -53,15 +53,6 @@
         >
           ⚙️ Configuración
         </RouterLink>
-
-        <RouterLink
-          v-if="auth.isSuperAdmin"
-          to="/users"
-          class="nav-link"
-          :class="{ active: isActive('/users') }"
-        >
-          👥 Usuarios
-        </RouterLink>
       </nav>
 
       <div class="app-navbar__session">

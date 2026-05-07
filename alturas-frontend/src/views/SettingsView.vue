@@ -1,504 +1,115 @@
 <template>
-  <section class="page">
-    <div class="dashboard-toolbar">
-      <div>
-        <span class="mini-title">Configuración</span>
-        <h1 class="h1 mb-2">Configuración operativa</h1>
-        <p class="p mb-0">
-          Gestiona trabajadores nuevos, revisa tus áreas asignadas y solicita acceso a otras zonas.
-        </p>
-      </div>
-
-      <div class="header-actions">
-        <RouterLink to="/documents" class="secondary-btn">
-          Volver a documentos
-        </RouterLink>
-      </div>
-    </div>
-
-    <div v-if="error" class="state-box error">
-      {{ error }}
-    </div>
-
-    <div v-if="successMessage" class="state-box info">
-      {{ successMessage }}
-    </div>
-
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span class="label">Usuario</span>
-        <span>{{ auth.user?.username || '-' }}</span>
-      </div>
-
-      <div class="summary-card">
-        <span class="label">Rol</span>
-        <span>{{ auth.isSuperAdmin ? 'SUPER_ADMIN' : 'OPERADOR' }}</span>
-      </div>
-
-      <div class="summary-card">
-        <span class="label">Áreas asignadas</span>
-        <span>{{ visibleAreas }}</span>
-      </div>
-
-      <div class="summary-card">
-        <span class="label">Solicitudes pendientes</span>
-        <span>{{ auth.isSuperAdmin ? pendingRequests.length : myPendingCount }}</span>
-      </div>
-    </div>
-
-    <div class="settings-grid">
-      <div class="card border-0">
-        <div class="card-body">
-          <div class="page-header border-0 pb-0">
-            <div>
-              <h2 class="h4 mb-1">Mis áreas</h2>
-              <p class="helper-text mb-0">
-                Áreas donde puedes ver trabajadores, cargar documentos y operar información.
-              </p>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <div v-if="auth.isSuperAdmin" class="state-box info mb-0">
-            Tienes acceso global como SUPER_ADMIN.
-          </div>
-
-          <div v-else-if="auth.allowedAreas.length" class="area-list">
-            <span
-              v-for="area in auth.allowedAreas"
-              :key="area"
-              class="area-pill"
-            >
-              {{ area }}
-            </span>
-          </div>
-
-          <div v-else class="state-box error mb-0">
-            Este usuario no tiene áreas asignadas.
-          </div>
-        </div>
-      </div>
-
-      <div v-if="!auth.isSuperAdmin" class="card border-0">
-        <div class="card-body">
-          <div class="page-header border-0 pb-0">
-            <div>
-              <h2 class="h4 mb-1">Solicitar acceso a zona</h2>
-              <p class="helper-text mb-0">
-                Envía una solicitud al administrador para acceder a una nueva zona.
-              </p>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <form class="form-grid" @submit.prevent="submitAccessRequest">
-            <div class="form-field full-span">
-              <label class="label" for="requestedArea">Zona solicitada</label>
-              <select
-                id="requestedArea"
-                v-model="accessForm.requestedArea"
-                class="form-select"
-                :disabled="savingRequest"
-              >
-                <option value="">Seleccione</option>
-                <option
-                  v-for="area in requestableAreas"
-                  :key="area"
-                  :value="area"
-                >
-                  {{ area }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-field full-span">
-              <label class="label" for="reason">Motivo</label>
-              <textarea
-                id="reason"
-                v-model.trim="accessForm.reason"
-                class="form-control"
-                rows="4"
-                placeholder="Ejemplo: necesito cargar trabajadores nuevos de esta zona."
-                :disabled="savingRequest"
-              ></textarea>
-            </div>
-
-            <div class="full-span actions-row">
-              <button
-                type="submit"
-                class="btn btn-primary"
-                :disabled="savingRequest || !accessForm.requestedArea"
-              >
-                {{ savingRequest ? 'Enviando...' : 'Enviar solicitud' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="card border-0 mt-4">
+  <section class="settings-shell">
+    <aside class="settings-sidebar card border-0">
       <div class="card-body">
-        <div class="page-header border-0 pb-0">
-          <div>
-            <h2 class="h4 mb-1">Agregar trabajador nuevo</h2>
-            <p class="helper-text mb-0">
-              Crea trabajadores nuevos. El operador solo puede asignarlos a sus áreas permitidas.
-            </p>
-          </div>
-
-          <RouterLink to="/employees/new" class="primary-btn">
-            Agregar trabajador
-          </RouterLink>
-        </div>
-
-        <div class="hr"></div>
-
-        <div class="state-box info mb-0">
-          El trabajador creado quedará disponible para carga automática por cédula desde los PDFs.
-        </div>
+        <h1>Configuración</h1>
+        <p>Administración operativa y de comunicaciones.</p>
+        <button v-for="item in sections" :key="item.key" class="side-link" :class="{active:active===item.key}" @click="active=item.key">{{ item.icon }} {{ item.label }}</button>
       </div>
-    </div>
+    </aside>
 
-    <div class="card border-0 mt-4">
+    <main class="settings-content card border-0">
       <div class="card-body">
-        <div class="page-header border-0 pb-0">
-          <div>
-            <h2 class="h4 mb-1">Mis solicitudes</h2>
-            <p class="helper-text mb-0">
-              Historial de solicitudes de acceso enviadas por tu usuario.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            class="secondary-btn"
-            :disabled="loading"
-            @click="loadData"
-          >
-            {{ loading ? 'Actualizando...' : 'Actualizar' }}
-          </button>
+        <div class="section-header">
+          <h2>{{ current.label }}</h2>
+          <p>{{ current.desc }}</p>
         </div>
 
-        <div class="hr"></div>
+        <div v-if="error" class="state-box error">{{ error }}</div>
+        <div v-if="success" class="state-box info">{{ success }}</div>
 
-        <div v-if="!myRequests.length" class="state-box mb-0">
-          No tienes solicitudes registradas.
-        </div>
-
-        <div v-else class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>Área</th>
-                <th>Estado</th>
-                <th>Motivo</th>
-                <th>Comentario admin</th>
-                <th>Fecha</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr v-for="request in myRequests" :key="request.id">
-                <td>{{ request.requestedArea }}</td>
-                <td>
-                  <span :class="statusClass(request.status)">
-                    {{ statusLabel(request.status) }}
-                  </span>
-                </td>
-                <td>{{ request.reason || '-' }}</td>
-                <td>{{ request.adminComment || '-' }}</td>
-                <td>{{ formatDate(request.createdAt) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="auth.isSuperAdmin" class="card border-0 mt-4">
-      <div class="card-body">
-        <div class="page-header border-0 pb-0">
-          <div>
-            <h2 class="h4 mb-1">Solicitudes pendientes de aprobación</h2>
-            <p class="helper-text mb-0">
-              Aprueba o rechaza solicitudes de operadores para acceder a nuevas zonas.
-            </p>
+        <div v-if="active==='general'" class="panel-grid">
+          <div class="panel">
+            <h3>Resumen</h3>
+            <p>Configura correos de aprobación, copias de notificación y coordinadores por zona.</p>
           </div>
         </div>
 
-        <div class="hr"></div>
+        <form v-if="active==='emails' || active==='approvers'" class="panel-grid" @submit.prevent="saveEmails">
+          <div class="panel" v-for="field in emailFieldsForSection" :key="field.key">
+            <label>{{ field.label }}</label>
+            <input v-model.trim="emailForm[field.key]" class="form-control" :placeholder="field.placeholder" />
+          </div>
+          <div class="actions"><button class="btn btn-primary" :disabled="loading">{{ loading ? 'Guardando...' : 'Guardar' }}</button><button type="button" class="secondary-btn" @click="loadAll">Cancelar</button></div>
+        </form>
 
-        <div v-if="!pendingRequests.length" class="state-box mb-0">
-          No hay solicitudes pendientes.
-        </div>
+        <form v-if="active==='zones'" class="panel-grid" @submit.prevent="saveZones">
+          <div class="panel" v-for="zone in zones" :key="zone">
+            <label>{{ zone }}</label>
+            <input v-model.trim="zoneForm[`zone.coordinator.${zone}`]" class="form-control" placeholder="coordinador@empresa.com" />
+          </div>
+          <div class="actions"><button class="btn btn-primary" :disabled="loading">{{ loading ? 'Guardando...' : 'Guardar' }}</button><button type="button" class="secondary-btn" @click="loadAll">Cancelar</button></div>
+        </form>
 
-        <div v-else class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Área solicitada</th>
-                <th>Motivo</th>
-                <th>Fecha</th>
-                <th>Comentario</th>
-                <th class="text-center">Acción</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <tr v-for="request in pendingRequests" :key="request.id">
-                <td>{{ request.requestedByUsername || '-' }}</td>
-                <td>{{ request.requestedArea }}</td>
-                <td>{{ request.reason || '-' }}</td>
-                <td>{{ formatDate(request.createdAt) }}</td>
-                <td>
-                  <input
-                    v-model.trim="reviewComments[request.id]"
-                    type="text"
-                    class="form-control form-control-sm"
-                    placeholder="Comentario opcional"
-                  />
-                </td>
-                <td>
-                  <div class="actions justify-content-center">
-                    <button
-                      type="button"
-                      class="secondary-btn"
-                      :disabled="reviewingId === request.id"
-                      @click="approveRequest(request.id)"
-                    >
-                      Aprobar
-                    </button>
-
-                    <button
-                      type="button"
-                      class="secondary-btn danger-btn"
-                      :disabled="reviewingId === request.id"
-                      @click="rejectRequest(request.id)"
-                    >
-                      Rechazar
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-if="active==='users'" class="panel-grid">
+          <div class="panel full">
+            <div class="section-row"><h3>Usuarios y roles</h3><button class="btn btn-primary" @click="openCreate">Nuevo usuario</button></div>
+            <table class="table table-sm"><thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Áreas</th><th>Estado</th><th></th></tr></thead>
+              <tbody><tr v-for="u in users" :key="u.id"><td>{{u.username}}</td><td>{{u.email}}</td><td>{{(u.roles||[]).join(', ')}}</td><td>{{(u.allowedAreas||[]).join(', ')||'-'}}</td><td>{{u.enabled?'Activo':'Inactivo'}}</td><td><button class="secondary-btn" @click="editUser(u)">Editar</button></td></tr></tbody></table>
+          </div>
+          <div class="panel full" v-if="showUserForm">
+            <h3>{{ editId ? 'Editar usuario':'Crear usuario' }}</h3>
+            <div class="user-grid"><input v-model.trim="userForm.username" class="form-control" placeholder="Usuario"/><input v-model.trim="userForm.email" class="form-control" placeholder="correo@empresa.com"/><input v-model="userForm.password" class="form-control" placeholder="Contraseña (solo crear)" :disabled="!!editId"/></div>
+            <div class="user-grid"><select v-model="userForm.role" class="form-select"><option>OPERADOR</option><option>APROBADOR</option><option>SUPER_ADMIN</option></select><input v-model.trim="areasCsv" class="form-control" placeholder="Áreas separadas por coma"/><label><input type="checkbox" v-model="userForm.enabled"/> Activo</label></div>
+            <div class="actions"><button class="btn btn-primary" @click="saveUser">Guardar</button><button class="secondary-btn" @click="resetUser">Cancelar</button></div>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import {
-  approveAccessRequest,
-  createAccessRequest,
-  getMyAccessRequests,
-  getPendingAccessRequests,
-  rejectAccessRequest
-} from '../api/accessRequest'
-import { useAuthStore } from '../stores/auth'
+import { computed, onMounted, ref } from 'vue'
+import http from '../api/http'
+import { getEmailSettings, getZoneCoordinators, updateEmailSettings, updateZoneCoordinators } from '../api/settings'
 
-const auth = useAuthStore()
-
-const allAreas = [
-  'CENTRO',
-  'NORTE',
-  'OCCIDENTE',
-  'ORIENTE',
-  'PUERTO',
-  'RICAURTE',
-  'SUGAMUXI',
-  'TUNDAMA',
-  'EDIFICIO'
-]
-
+const active = ref('general')
 const loading = ref(false)
-const savingRequest = ref(false)
-const reviewingId = ref('')
 const error = ref('')
-const successMessage = ref('')
+const success = ref('')
+const emailForm = ref({})
+const zoneForm = ref({})
+const zones = ['CENTRO','NORTE','OCCIDENTE','ORIENTE','PUERTO','RICAURTE','SUGAMUXI','TUNDAMA','EDIFICIO']
+const users = ref([])
+const showUserForm = ref(false)
+const editId = ref('')
+const areasCsv = ref('')
+const userForm = ref({ username:'', email:'', password:'', role:'OPERADOR', enabled:true })
 
-const myRequests = ref([])
-const pendingRequests = ref([])
-const reviewComments = reactive({})
+const sections = [
+  { key:'general', label:'General / Operativa', icon:'🧭', desc:'Parámetros de plataforma' },
+  { key:'emails', label:'Correos', icon:'✉️', desc:'Correos corporativos y copias' },
+  { key:'approvers', label:'Aprobadores', icon:'✅', desc:'Destinatarios de aprobación' },
+  { key:'zones', label:'Coordinadores por zona', icon:'🗺️', desc:'Correo por zona operativa' },
+  { key:'users', label:'Usuarios y roles', icon:'👥', desc:'Control de acceso' }
+]
+const current = computed(() => sections.find(s => s.key===active.value) || sections[0])
+const emailFieldsForSection = computed(() => active.value === 'approvers'
+  ? [{key:'approver.to',label:'Correo aprobador',placeholder:'aprobador@empresa.com'},{key:'approver.cc',label:'CC aprobador',placeholder:'cc1@empresa.com, cc2@empresa.com'}]
+  : [{key:'worker.cc.hr',label:'Talento humano',placeholder:'th@empresa.com'},{key:'worker.cc.payroll',label:'Nómina',placeholder:'nomina@empresa.com'},{key:'worker.cc.default',label:'Copias por defecto',placeholder:'copia1@empresa.com'}])
 
-const accessForm = reactive({
-  requestedArea: '',
-  reason: ''
-})
-
-const visibleAreas = computed(() => {
-  if (auth.isSuperAdmin) return 'Acceso global'
-  return auth.allowedAreas.length ? auth.allowedAreas.join(', ') : 'Sin áreas asignadas'
-})
-
-const requestableAreas = computed(() => {
-  if (auth.isSuperAdmin) return allAreas
-  return allAreas.filter((area) => !auth.allowedAreas.includes(area))
-})
-
-const myPendingCount = computed(() =>
-  myRequests.value.filter((request) => request.status === 'PENDING').length
-)
-
-const loadData = async () => {
-  try {
-    loading.value = true
-    error.value = ''
-
-    const myResponse = await getMyAccessRequests()
-    myRequests.value = Array.isArray(myResponse.data) ? myResponse.data : []
-
-    if (auth.isSuperAdmin) {
-      const pendingResponse = await getPendingAccessRequests()
-      pendingRequests.value = Array.isArray(pendingResponse.data) ? pendingResponse.data : []
-    } else {
-      pendingRequests.value = []
-    }
-  } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo cargar la configuración.'
-  } finally {
-    loading.value = false
-  }
+const loadAll = async () => {
+  error.value=''; success.value=''
+  const [emails, zonesRes, usersRes] = await Promise.all([getEmailSettings(), getZoneCoordinators(), http.get('/api/users')])
+  emailForm.value = { ...emails.data }
+  zoneForm.value = { ...zonesRes.data }
+  users.value = Array.isArray(usersRes.data) ? usersRes.data : []
+}
+const saveEmails = async () => { loading.value=true; error.value=''; success.value=''; try { await updateEmailSettings(emailForm.value); success.value='Correos actualizados.' } catch (e) { error.value=e?.response?.data?.message||'No se pudo guardar.' } finally { loading.value=false } }
+const saveZones = async () => { loading.value=true; error.value=''; success.value=''; try { await updateZoneCoordinators(zoneForm.value); success.value='Coordinadores actualizados.' } catch (e) { error.value=e?.response?.data?.message||'No se pudo guardar.' } finally { loading.value=false } }
+const openCreate = () => { showUserForm.value=true; editId.value=''; userForm.value={ username:'', email:'', password:'', role:'OPERADOR', enabled:true }; areasCsv.value='' }
+const editUser = (u) => { showUserForm.value=true; editId.value=u.id; userForm.value={ username:u.username, email:u.email, password:'', role:(u.roles||['OPERADOR'])[0], enabled:!!u.enabled }; areasCsv.value=(u.allowedAreas||[]).join(', ') }
+const resetUser = () => { showUserForm.value=false }
+const saveUser = async () => {
+  const payload = { username:userForm.value.username, email:userForm.value.email, password:userForm.value.password, roles:[userForm.value.role], allowedAreas:userForm.value.role==='OPERADOR'?areasCsv.value.split(',').map(v=>v.trim()).filter(Boolean):[], enabled:userForm.value.enabled }
+  if (editId.value) await http.put(`/api/users/${editId.value}`, payload); else await http.post('/api/users', payload)
+  await loadAll(); showUserForm.value=false
 }
 
-const submitAccessRequest = async () => {
-  if (!accessForm.requestedArea) return
-
-  try {
-    savingRequest.value = true
-    error.value = ''
-    successMessage.value = ''
-
-    await createAccessRequest({
-      requestedArea: accessForm.requestedArea,
-      reason: accessForm.reason
-    })
-
-    successMessage.value = 'Solicitud enviada correctamente.'
-    accessForm.requestedArea = ''
-    accessForm.reason = ''
-
-    await loadData()
-  } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo enviar la solicitud.'
-  } finally {
-    savingRequest.value = false
-  }
-}
-
-const approveRequest = async (id) => {
-  try {
-    reviewingId.value = id
-    error.value = ''
-    successMessage.value = ''
-
-    await approveAccessRequest(id, {
-      adminComment: reviewComments[id] || ''
-    })
-
-    successMessage.value = 'Solicitud aprobada correctamente.'
-    await loadData()
-  } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo aprobar la solicitud.'
-  } finally {
-    reviewingId.value = ''
-  }
-}
-
-const rejectRequest = async (id) => {
-  try {
-    reviewingId.value = id
-    error.value = ''
-    successMessage.value = ''
-
-    await rejectAccessRequest(id, {
-      adminComment: reviewComments[id] || ''
-    })
-
-    successMessage.value = 'Solicitud rechazada correctamente.'
-    await loadData()
-  } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo rechazar la solicitud.'
-  } finally {
-    reviewingId.value = ''
-  }
-}
-
-const statusLabel = (status) => {
-  if (status === 'PENDING') return 'PENDIENTE'
-  if (status === 'APPROVED') return 'APROBADA'
-  if (status === 'REJECTED') return 'RECHAZADA'
-  return status || '-'
-}
-
-const statusClass = (status) => {
-  if (status === 'APPROVED') return 'status-pill-active'
-  if (status === 'REJECTED') return 'status-pill-inactive'
-  if (status === 'PENDING') return 'status-pill-warning'
-  return 'status-pill-neutral'
-}
-
-const formatDate = (value) => {
-  if (!value) return '-'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-
-  return date.toLocaleString('es-CO', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-onMounted(() => {
-  loadData()
-})
+onMounted(loadAll)
 </script>
 
 <style scoped>
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1rem;
-}
-
-.area-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.area-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  background: #eef2f7;
-  color: #334155;
-  font-weight: 800;
-  font-size: 0.8rem;
-}
-
-.danger-btn {
-  color: #991b1b;
-  border-color: #fecaca;
-  background: #fff1f2;
-}
-
-.danger-btn:hover {
-  color: #7f1d1d;
-  border-color: #fca5a5;
-  background: #ffe4e6;
-}
+.settings-shell{display:grid;grid-template-columns:300px 1fr;gap:1rem;align-items:start}.settings-sidebar{position:sticky;top:84px}.side-link{display:block;width:100%;text-align:left;border:none;background:transparent;padding:.7rem;border-radius:10px}.side-link.active,.side-link:hover{background:#eef4ff}.section-header{margin-bottom:1rem}.panel-grid{display:grid;gap:1rem}.panel{background:#f8fafc;padding:1rem;border-radius:12px}.panel.full{grid-column:1/-1}.actions{display:flex;gap:.6rem}.section-row{display:flex;justify-content:space-between}.user-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:.6rem}
 </style>
