@@ -75,22 +75,6 @@ public class DocumentAnalysisService {
 
 documentService.save(document);
 
-        /*
-         * Envío automático:
-         * - Solo envía si app.email.auto-send-enabled=true
-         * - EmailSendService internamente valida APTO / NO_APTO
-         * - Si queda PENDIENTE, lo registra como SKIPPED
-         * - Si falla SMTP, lo registra como FAILED
-         * - Si envía, lo registra como SENT
-         */
-        try {
-            emailSendService.sendAnalysisEmailIfEnabled(documentId);
-        } catch (Exception ignored) {
-            /*
-             * El análisis no debe fallar por un error de correo.
-             * Si EmailSendService alcanza a manejar el error, queda en email_logs.
-             */
-        }
 
         return buildResponse(document, analysis);
     }

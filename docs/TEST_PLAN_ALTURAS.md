@@ -49,3 +49,14 @@
 ## 10) Importación de trabajadores
 1. Validar endpoints de importación/plantilla si existen.
 2. Si no existen, registrar pendiente técnico en backlog.
+
+## 8) Configuración dinámica de correos (MongoDB)
+1. Iniciar sesión con `SUPER_ADMIN`.
+2. Ir a Configuración y actualizar `approver.to`, `approver.cc`, `worker.cc.hr`, `worker.cc.payroll`, `worker.cc.default`.
+3. Verificar en backend `GET /api/settings/email` que persiste en Mongo.
+4. Subir un lote de 2+ PDFs y validar que llega **un solo correo** al aprobador.
+5. Aprobar un documento y validar que correo al trabajador incluye copias de HR, nómina, coordinador por zona y default CC.
+
+## Pendientes
+- Completar pantalla de Configuración unificada con tabs/cards para correos, aprobadores, coordinadores, usuarios/roles y operativa en una sola vista.
+- Conectar formulario completo en frontend con `src/api/settings.js`.

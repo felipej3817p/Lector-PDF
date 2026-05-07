@@ -51,7 +51,7 @@
           class="nav-link"
           :class="{ active: isActive('/settings') }"
         >
-          Configuración
+          ⚙️ Configuración
         </RouterLink>
 
         <RouterLink
@@ -60,7 +60,7 @@
           class="nav-link"
           :class="{ active: isActive('/users') }"
         >
-          Usuarios
+          👥 Usuarios
         </RouterLink>
       </nav>
 

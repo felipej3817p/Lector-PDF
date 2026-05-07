@@ -24,6 +24,7 @@ public class DocumentBatchService {
     private final PdfTextExtractorService pdfTextExtractorService;
     private final PdfFieldParserService pdfFieldParserService;
     private final DocumentBatchFacadeService batchFacadeService;
+    private final EmailSendService emailSendService;
 
     public DocumentBatchService(
             EmployeeRepository employeeRepository,
@@ -31,7 +32,8 @@ public class DocumentBatchService {
             DocumentAnalysisService documentAnalysisService,
             PdfTextExtractorService pdfTextExtractorService,
             PdfFieldParserService pdfFieldParserService,
-            DocumentBatchFacadeService batchFacadeService
+            DocumentBatchFacadeService batchFacadeService,
+            EmailSendService emailSendService
     ) {
         this.employeeRepository = employeeRepository;
         this.documentService = documentService;
@@ -39,6 +41,7 @@ public class DocumentBatchService {
         this.pdfTextExtractorService = pdfTextExtractorService;
         this.pdfFieldParserService = pdfFieldParserService;
         this.batchFacadeService = batchFacadeService;
+        this.emailSendService = emailSendService;
     }
 
     public Map<String, Object> uploadAndAnalyze(
@@ -60,6 +63,7 @@ public class DocumentBatchService {
         }
 
         batchFacadeService.completeBatch(batch, results);
+        emailSendService.sendBatchSummaryEmail(batch.getId());
         return buildResponse(batch, results);
     }
 
