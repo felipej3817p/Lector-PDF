@@ -13,6 +13,7 @@ public class AuthResponse {
     private String email;
     private Set<Role> roles = new HashSet<>();
     private Set<AreaCode> allowedAreas = new HashSet<>();
+    private boolean globalAreaAccess;
 
     public AuthResponse() {
     }
@@ -22,13 +23,15 @@ public class AuthResponse {
             String username,
             String email,
             Set<Role> roles,
-            Set<AreaCode> allowedAreas
+            Set<AreaCode> allowedAreas,
+            boolean globalAreaAccess
     ) {
         this.token = token;
         this.username = username;
         this.email = email;
         this.roles = roles;
         this.allowedAreas = allowedAreas;
+        this.globalAreaAccess = globalAreaAccess;
     }
 
     public String getToken() {
@@ -69,5 +72,13 @@ public class AuthResponse {
 
     public void setAllowedAreas(Set<AreaCode> allowedAreas) {
         this.allowedAreas = allowedAreas;
+    }
+
+    public boolean isGlobalAreaAccess() {
+        return globalAreaAccess;
+    }
+
+    public void setGlobalAreaAccess(boolean globalAreaAccess) {
+        this.globalAreaAccess = globalAreaAccess;
     }
 }

@@ -24,9 +24,15 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
         userRepository.findByUsername("admin").ifPresentOrElse(
                 user -> {
-                    if (!user.getRoles().contains(Role.SUPER_ADMIN)) {
+                    if (!user.getRoles().contains(Role.SUPER_ADMIN)
+                            || !user.isEnabled()
+                            || user.getAccountStartDate() != null
+                            || user.getAccountExpirationDate() != null) {
                         user.setRoles(Set.of(Role.SUPER_ADMIN));
                         user.setAllowedAreas(Set.of());
+                        user.setEnabled(true);
+                        user.setAccountStartDate(null);
+                        user.setAccountExpirationDate(null);
                         userRepository.save(user);
                     }
                 },

@@ -1,308 +1,173 @@
 <template>
-  <header class="app-navbar">
-    <div class="app-navbar__inner">
-      <div class="app-navbar__brand">
-        <RouterLink :to="brandTarget" class="brand-link">
-          <span class="brand-title">EBSA Alturas</span>
-          <span class="brand-subtitle">Seguimiento de aptitud para trabajo en alturas</span>
-        </RouterLink>
-      </div>
+  <aside class="app-sidebar" aria-label="Navegación principal">
+    <div class="sidebar-brand">
+      <RouterLink :to="brandTarget" class="sidebar-brand__link">
+        <img
+          src="/sst-alturas-icon.svg"
+          alt="SSTAlturas"
+          class="sidebar-brand__logo"
+        />
 
-      <nav v-if="auth.isAuthenticated" class="app-navbar__nav">
+        <span class="sidebar-brand__text">
+          <strong>SSTAlturas</strong>
+          <small>Gestión de aptitud</small>
+        </span>
+      </RouterLink>
+    </div>
+
+    <nav v-if="auth.isAuthenticated" class="sidebar-nav">
+      <div class="sidebar-nav__group">
+        <span class="sidebar-nav__label">Operación</span>
+
         <RouterLink
-          v-if="!isApproverOnly"
+          v-if="canShowEmployees"
           to="/employees"
-          class="nav-link"
+          class="sidebar-link"
           :class="{ active: isActive('/employees') }"
         >
-          Trabajadores
+          <span class="sidebar-link__icon">👥</span>
+          <span>Trabajadores</span>
         </RouterLink>
 
         <RouterLink
-          v-if="!isApproverOnly"
+          v-if="auth.canUploadDocuments && !isApproverOnly"
           to="/documents/upload"
-          class="nav-link"
+          class="sidebar-link"
           :class="{ active: isActive('/documents/upload') }"
         >
-          Cargar evaluaciones
+          <span class="sidebar-link__icon">⬆</span>
+          <span>Cargar PDFs</span>
         </RouterLink>
 
         <RouterLink
-          v-if="auth.canReviewDocuments"
+          v-if="canShowReview"
           to="/review"
-          class="nav-link"
+          class="sidebar-link"
           :class="{ active: isActive('/review') }"
         >
-          Revisión SSA
+          <span class="sidebar-link__icon">✓</span>
+          <span>Revisión</span>
         </RouterLink>
 
         <RouterLink
-          v-if="auth.isSuperAdmin"
-          to="/documents"
-          class="nav-link"
-          :class="{ active: isActive('/documents') && !isActive('/documents/upload') }"
+          v-if="canShowReports"
+          to="/reports"
+          class="sidebar-link"
+          :class="{ active: isActive('/reports') }"
         >
-          Evaluaciones
+          <span class="sidebar-link__icon">📄</span>
+          <span>Reportes</span>
         </RouterLink>
 
         <RouterLink
-          v-if="!isApproverOnly"
+          v-if="auth.canAccessSettings"
           to="/settings"
-          class="nav-link"
-          :class="{ active: isActive('/settings') }"
+          class="sidebar-link"
+          :class="{ active: isActive('/settings') || isActive('/users') }"
         >
-          Configuración
+          <span class="sidebar-link__icon">⚙</span>
+          <span>Configuración</span>
         </RouterLink>
-
-        <RouterLink
-          v-if="auth.isSuperAdmin"
-          to="/users"
-          class="nav-link"
-          :class="{ active: isActive('/users') }"
-        >
-          Usuarios
-        </RouterLink>
-      </nav>
-
-      <div class="app-navbar__session">
-        <template v-if="auth.isAuthenticated">
-          <div class="session-box">
-            <div class="session-line">
-              <strong>{{ auth.user?.username || 'Usuario' }}</strong>
-
-              <span
-                class="role-pill"
-                :class="roleClass"
-              >
-                {{ roleLabel }}
-              </span>
-            </div>
-
-            <div class="session-meta">
-              <template v-if="auth.isSuperAdmin">
-                <span>Acceso global</span>
-              </template>
-
-              <template v-else-if="auth.isApprover">
-                <span>Solo revisión y aprobación</span>
-              </template>
-
-              <template v-else>
-                <span>
-                  Áreas:
-                  {{ visibleAreas }}
-                </span>
-              </template>
-            </div>
-          </div>
-
-          <button type="button" class="logout-btn" @click="auth.logout">
-            Cerrar sesión
-          </button>
-        </template>
-
-        <template v-else>
-          <RouterLink to="/login" class="login-btn">
-            Iniciar sesión
-          </RouterLink>
-        </template>
       </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div v-if="auth.isAuthenticated" class="sidebar-user-card">
+        <div class="sidebar-user-card__avatar">
+          {{ userInitials }}
+        </div>
+
+        <div class="sidebar-user-card__body">
+          <strong>{{ auth.user?.username || 'Usuario' }}</strong>
+          <span>{{ roleLabel }}</span>
+          <small :title="areaScope.detail">{{ sidebarScopeLabel }}</small>
+        </div>
+
+        <div class="sidebar-user-actions">
+          <button
+            type="button"
+            class="sidebar-icon-action sidebar-icon-action--logout"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            @click="auth.logout"
+          >
+            ⏻
+          </button>
+        </div>
+      </div>
+
+      <RouterLink v-else to="/login" class="sidebar-logout">
+        Iniciar sesión
+      </RouterLink>
     </div>
-  </header>
+  </aside>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { areaScopeSummary } from '../utils/areaCatalog'
 
 const auth = useAuthStore()
 const route = useRoute()
 
 const isActive = (path) => route.path === path || route.path.startsWith(`${path}/`)
 
-const isApproverOnly = computed(() => auth.isApprover && !auth.isSuperAdmin)
-
-const brandTarget = computed(() => {
-  return isApproverOnly.value ? '/review' : '/employees'
+const isApproverOnly = computed(() => {
+  return auth.isApprover && !auth.isAdmin && !auth.isSuperAdmin
 })
 
-const visibleAreas = computed(() => {
-  const areas = Array.isArray(auth.allowedAreas) ? auth.allowedAreas : []
-  return areas.length ? areas.join(', ') : 'Sin áreas asignadas'
+const canShowEmployees = computed(() => {
+  return auth.isAuthenticated
+})
+
+const canShowReview = computed(() => {
+  return auth.canReviewDocuments
+})
+
+const canShowReports = computed(() => {
+  return auth.isAuthenticated
+})
+
+const brandTarget = computed(() => {
+  return '/employees'
+})
+
+const areaScope = computed(() => areaScopeSummary(auth.allowedAreas))
+
+const sidebarScopeLabel = computed(() => {
+  if (auth.isAdmin || auth.hasGlobalAreaAccess) return 'Acceso global'
+  if (auth.isApprover) return 'Revisión y reportes'
+  return areaScope.value.summary
 })
 
 const roleLabel = computed(() => {
-  if (auth.isSuperAdmin) return 'SUPER_ADMIN'
+  if (auth.isSuperAdmin) return 'Admin'
+  if (auth.isAdmin) return 'ADMIN'
   if (auth.isApprover) return 'APROBADOR'
+  if (auth.isViewer) return 'VISUALIZADOR'
   return 'OPERADOR'
 })
 
-const roleClass = computed(() => {
-  if (auth.isSuperAdmin) return 'role-admin'
-  if (auth.isApprover) return 'role-approver'
-  return 'role-operator'
+const userInitials = computed(() => {
+  const username = auth.user?.username || 'U'
+
+  return username
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'U'
 })
 </script>
 
 <style scoped>
-.app-navbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-}
-
-.app-navbar__inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0.9rem 1.2rem;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 1rem;
-  align-items: center;
-}
-
-.brand-link {
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-}
-
-.brand-title {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #111827;
-  line-height: 1.1;
-}
-
-.brand-subtitle {
-  font-size: 0.82rem;
-  color: #6b7280;
-  line-height: 1.1;
-  margin-top: 0.2rem;
-}
-
-.app-navbar__nav {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: #334155;
-  font-weight: 700;
-  padding: 0.68rem 0.95rem;
-  border-radius: 12px;
-  transition: all 0.18s ease;
-}
-
-.nav-link:hover {
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-.nav-link.active {
-  background: rgba(63, 111, 143, 0.12);
-  color: #24445d;
-}
-
-.app-navbar__session {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.session-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  text-align: right;
-}
-
-.session-line {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
-.session-meta {
-  font-size: 0.82rem;
-  color: #6b7280;
-}
-
-.role-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0.22rem 0.62rem;
-  border-radius: 999px;
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-
-.role-admin {
-  background: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
-}
-
-.role-approver {
-  background: rgba(126, 34, 206, 0.12);
-  color: #7e22ce;
-}
-
-.role-operator {
-  background: rgba(22, 163, 74, 0.12);
-  color: #15803d;
-}
-
-.logout-btn,
-.login-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 0.68rem 0.9rem;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #111827;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.logout-btn:hover,
-.login-btn:hover {
-  background: #f8fafc;
-}
-
-@media (max-width: 992px) {
-  .app-navbar__inner {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .app-navbar__nav {
-    justify-content: flex-start;
-  }
-
-  .app-navbar__session {
-    justify-content: space-between;
-  }
-
-  .session-box {
-    text-align: left;
-  }
-
-  .session-line {
-    justify-content: flex-start;
-  }
+.sidebar-brand__logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: contain;
+  flex: 0 0 auto;
 }
 </style>

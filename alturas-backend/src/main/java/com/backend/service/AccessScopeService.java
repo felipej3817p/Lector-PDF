@@ -16,9 +16,11 @@ import java.util.Set;
 public class AccessScopeService {
 
     private final UserRepository userRepository;
+    private final UserAccessEvaluator userAccessEvaluator;
 
-    public AccessScopeService(UserRepository userRepository) {
+    public AccessScopeService(UserRepository userRepository, UserAccessEvaluator userAccessEvaluator) {
         this.userRepository = userRepository;
+        this.userAccessEvaluator = userAccessEvaluator;
     }
 
     public User getCurrentUser() {
@@ -32,38 +34,70 @@ public class AccessScopeService {
                 .orElseThrow(() -> new IllegalStateException("No se encontró el usuario autenticado."));
     }
 
-    public boolean isSuperAdmin(User user) {
+    public boolean hasRole(User user, Role role) {
         return user != null
-                && user.getRoles() != null
-                && user.getRoles().contains(Role.SUPER_ADMIN);
+                && userAccessEvaluator.hasRole(user, role);
+    }
+
+    public boolean isSuperAdmin(User user) {
+        return hasRole(user, Role.SUPER_ADMIN) || hasRole(user, Role.ADMIN);
     }
 
     public boolean isApprover(User user) {
-        return user != null
-                && user.getRoles() != null
-                && user.getRoles().contains(Role.APROBADOR);
+        return hasRole(user, Role.APROBADOR);
+    }
+
+    public boolean isOperator(User user) {
+        return hasRole(user, Role.OPERADOR);
+    }
+
+    public boolean isViewer(User user) {
+        return hasRole(user, Role.VISUALIZADOR);
     }
 
     public boolean hasGlobalDocumentAccess(User user) {
-        return isSuperAdmin(user) || isApprover(user);
+        return isSuperAdmin(user) || isApprover(user) || hasGlobalAreaAccess(user);
+    }
+
+    public boolean hasGlobalAreaAccess(User user) {
+        return user != null
+                && user.isGlobalAreaAccess()
+                && (isOperator(user) || isViewer(user));
     }
 
     public boolean canReviewDocuments(User user) {
         return isSuperAdmin(user) || isApprover(user);
     }
 
+    public boolean isIT(User user) {
+        return hasRole(user, Role.IT);
+    }
+
+    public boolean canManageSettings(User user) {
+        return isSuperAdmin(user) || isIT(user) || isApprover(user) || isOperator(user);
+    }
+
+    public boolean canOperateDocuments(User user) {
+        return isSuperAdmin(user) || isOperator(user);
+    }
+
+    public boolean canWriteEmployees(User user) {
+        return isSuperAdmin(user) || isOperator(user);
+    }
+
+    public boolean isReadOnlyViewer(User user) {
+        return isViewer(user) && !isSuperAdmin(user) && !isApprover(user) && !isOperator(user);
+    }
+
     public Set<AreaCode> getAllowedAreas(User user) {
-        if (user == null || user.getAllowedAreas() == null) {
-            return Collections.emptySet();
-        }
-        return user.getAllowedAreas();
+        return user == null ? Collections.emptySet() : userAccessEvaluator.effectiveAllowedAreas(user);
     }
 
     public void assertSuperAdmin() {
         User currentUser = getCurrentUser();
 
         if (!isSuperAdmin(currentUser)) {
-            throw new IllegalArgumentException("No tienes permisos de super administrador.");
+            throw new IllegalArgumentException("No tienes permisos de administrador.");
         }
     }
 
@@ -75,6 +109,26 @@ public class AccessScopeService {
         }
     }
 
+    public void assertCanOperateDocuments() {
+        User currentUser = getCurrentUser();
+
+        if (!canOperateDocuments(currentUser)) {
+            throw new IllegalArgumentException("No tienes permisos para cargar, eliminar o modificar documentos.");
+        }
+    }
+
+    public void assertCanWriteEmployees() {
+        User currentUser = getCurrentUser();
+
+        if (!canWriteEmployees(currentUser)) {
+            throw new IllegalArgumentException("No tienes permisos para crear, editar o eliminar trabajadores.");
+        }
+    }
+
+    public void assertCanReadArea(AreaCode areaCode) {
+        validateAreaAccess(areaCode);
+    }
+
     public void validateAreaAccess(AreaCode areaCode) {
         User currentUser = getCurrentUser();
 
@@ -83,14 +137,18 @@ public class AccessScopeService {
         }
 
         if (areaCode == null || !getAllowedAreas(currentUser).contains(areaCode)) {
-            throw new IllegalArgumentException("No tienes permiso para operar sobre esta área.");
+            throw new IllegalArgumentException("No tienes permiso para consultar esta zona.");
         }
     }
 
     public AreaCode resolveWritableArea(AreaCode requestedArea) {
         User currentUser = getCurrentUser();
 
-        if (isSuperAdmin(currentUser)) {
+        if (!canWriteEmployees(currentUser) && !canOperateDocuments(currentUser)) {
+            throw new IllegalArgumentException("No tienes permisos de escritura sobre zonas.");
+        }
+
+        if (isSuperAdmin(currentUser) || hasGlobalAreaAccess(currentUser)) {
             return requestedArea;
         }
 
@@ -104,6 +162,7 @@ public class AccessScopeService {
             if (!allowedAreas.contains(requestedArea)) {
                 throw new IllegalArgumentException("No tienes permiso para operar sobre esta área.");
             }
+
             return requestedArea;
         }
 

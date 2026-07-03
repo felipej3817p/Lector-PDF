@@ -2,6 +2,7 @@ package com.backend.dto.employee;
 
 import com.backend.model.AreaCode;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class EmployeeDashboardResponse {
@@ -16,10 +17,14 @@ public class EmployeeDashboardResponse {
     private String email;
     private String zone;
     private boolean active;
+    private boolean currentlyActive;
+    private LocalDateTime activeStartDate;
+    private LocalDateTime activeExpirationDate;
 
     private String lastDocumentId;
     private String lastOriginalFileName;
     private LocalDateTime lastUploadedAt;
+    private LocalDate lastFechaEvaluacion;
     private String lastProcessingStatus;
     private String lastResultStatus;
 
@@ -37,9 +42,13 @@ public class EmployeeDashboardResponse {
             String email,
             String zone,
             boolean active,
+            boolean currentlyActive,
+            LocalDateTime activeStartDate,
+            LocalDateTime activeExpirationDate,
             String lastDocumentId,
             String lastOriginalFileName,
             LocalDateTime lastUploadedAt,
+            LocalDate lastFechaEvaluacion,
             String lastProcessingStatus,
             String lastResultStatus
     ) {
@@ -53,9 +62,13 @@ public class EmployeeDashboardResponse {
         this.email = email;
         this.zone = zone;
         this.active = active;
+        this.currentlyActive = currentlyActive;
+        this.activeStartDate = activeStartDate;
+        this.activeExpirationDate = activeExpirationDate;
         this.lastDocumentId = lastDocumentId;
         this.lastOriginalFileName = lastOriginalFileName;
         this.lastUploadedAt = lastUploadedAt;
+        this.lastFechaEvaluacion = lastFechaEvaluacion;
         this.lastProcessingStatus = lastProcessingStatus;
         this.lastResultStatus = lastResultStatus;
     }
@@ -100,6 +113,10 @@ public class EmployeeDashboardResponse {
         return active;
     }
 
+    public boolean isCurrentlyActive() {
+        return currentlyActive;
+    }
+
     public String getLastDocumentId() {
         return lastDocumentId;
     }
@@ -110,6 +127,14 @@ public class EmployeeDashboardResponse {
 
     public LocalDateTime getLastUploadedAt() {
         return lastUploadedAt;
+    }
+
+    public LocalDate getLastFechaEvaluacion() {
+        return lastFechaEvaluacion;
+    }
+
+    public LocalDate getLastEvaluationDate() {
+        return lastFechaEvaluacion;
     }
 
     public String getLastProcessingStatus() {
@@ -160,6 +185,11 @@ public class EmployeeDashboardResponse {
         this.active = active;
     }
 
+    public void setCurrentlyActive(boolean currentlyActive) { this.currentlyActive = currentlyActive; }
+    public LocalDateTime getActiveStartDate() { return activeStartDate; }
+    public void setActiveStartDate(LocalDateTime activeStartDate) { this.activeStartDate = activeStartDate; }
+    public LocalDateTime getActiveExpirationDate() { return activeExpirationDate; }
+    public void setActiveExpirationDate(LocalDateTime activeExpirationDate) { this.activeExpirationDate = activeExpirationDate; }
     public void setLastDocumentId(String lastDocumentId) {
         this.lastDocumentId = lastDocumentId;
     }
@@ -170,6 +200,14 @@ public class EmployeeDashboardResponse {
 
     public void setLastUploadedAt(LocalDateTime lastUploadedAt) {
         this.lastUploadedAt = lastUploadedAt;
+    }
+
+    public void setLastFechaEvaluacion(LocalDate lastFechaEvaluacion) {
+        this.lastFechaEvaluacion = lastFechaEvaluacion;
+    }
+
+    public void setLastEvaluationDate(LocalDate lastEvaluationDate) {
+        this.lastFechaEvaluacion = lastEvaluationDate;
     }
 
     public void setLastProcessingStatus(String lastProcessingStatus) {

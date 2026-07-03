@@ -9,9 +9,14 @@
     <section class="login-card card border-0">
       <div class="card-body p-4 p-md-5">
         <div class="login-brand">
-          <span class="login-brand-mark"></span>
+          <img
+            src="/sst-alturas-icon.svg"
+            alt="SSTAlturas"
+            class="login-brand-logo"
+          />
+
           <div>
-            <div class="login-brand-title">EBSA</div>
+            <div class="login-brand-title">SSTAlturas</div>
             <div class="login-brand-subtitle">Gestión de aptitud en alturas</div>
           </div>
         </div>
@@ -30,10 +35,13 @@
             <label class="label" for="identifier">Usuario o correo</label>
             <input
               id="identifier"
+              name="login_identifier"
               v-model.trim="identifier"
               class="input"
               type="text"
-              autocomplete="username email"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
               placeholder="Ingresa tu usuario o correo"
               :disabled="loading"
               @keydown.enter.prevent="focusPassword"
@@ -55,14 +63,21 @@
 
             <input
               id="password"
+              name="login_password"
               ref="passwordRef"
               v-model="password"
               class="input"
               :type="showPassword ? 'text' : 'password'"
-              autocomplete="current-password"
+              autocomplete="new-password"
               placeholder="••••••••"
               :disabled="loading"
             />
+          </div>
+
+          <div class="forgot-password-row">
+            <RouterLink to="/forgot-password" class="link">
+              ¿Olvidaste tu contraseña?
+            </RouterLink>
           </div>
 
           <div v-if="error" class="state-box error">
@@ -85,36 +100,32 @@
 
         <div class="login-note">
           <div class="mini">
-            <div class="mini-title">Operador</div>
+            <div class="mini-title"></div>
             <div class="mini-value">Carga evaluaciones y gestiona trabajadores de su zona</div>
           </div>
 
           <div class="mini">
-            <div class="mini-title">Aprobador</div>
+            <div class="mini-title"></div>
             <div class="mini-value">Revisa conceptos y autoriza notificaciones</div>
           </div>
         </div>
 
-        <div class="mt-4 d-flex justify-content-center">
-          <RouterLink to="/" class="secondary-btn">
-            Volver al inicio
-          </RouterLink>
-        </div>
+        <div class="mt-4 d-flex justify-content-center"></div>
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const identifier = ref('admin')
+const identifier = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
@@ -133,6 +144,11 @@ const focusPassword = () => {
   passwordRef.value?.focus?.()
 }
 
+onMounted(() => {
+  identifier.value = ''
+  password.value = ''
+})
+
 const resolvePostLoginRoute = () => {
   const roles = Array.isArray(auth.user?.roles) ? auth.user.roles : []
 
@@ -141,6 +157,47 @@ const resolvePostLoginRoute = () => {
   }
 
   return '/employees'
+}
+
+const isInactiveUserError = (rawMessage) => {
+  const message = String(rawMessage || '').toLowerCase()
+
+  return (
+    message.includes('inactivo') ||
+    message.includes('inhabilitado') ||
+    message.includes('inactive') ||
+    message.includes('disabled') ||
+    message.includes('deshabilitado') ||
+    message.includes('usuario está inactivo') ||
+    message.includes('usuario esta inactivo')
+  )
+}
+
+const isExpiredUserError = (rawMessage) => {
+  const message = String(rawMessage || '').toLowerCase()
+  return message.includes('vigencia') && (message.includes('finalizó') || message.includes('finalizo') || message.includes('venc'))
+}
+
+const isNotStartedUserError = (rawMessage) => {
+  const message = String(rawMessage || '').toLowerCase()
+  return message.includes('vigencia') && (message.includes('no ha iniciado') || message.includes('todavía no') || message.includes('todavia no'))
+}
+
+const isBadCredentialsError = (status, rawMessage) => {
+  const message = String(rawMessage || '').toLowerCase()
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    status === 400 ||
+    message.includes('badcredentials') ||
+    message.includes('bad credentials') ||
+    message.includes('credenciales') ||
+    message.includes('contraseña') ||
+    message.includes('password') ||
+    message.includes('inválidos') ||
+    message.includes('invalid')
+  )
 }
 
 const onSubmit = async () => {
@@ -159,14 +216,24 @@ const onSubmit = async () => {
     router.push(redirect)
   } catch (e) {
     const status = e?.response?.status
-    const message = e?.response?.data?.message
+    const rawMessage =
+      e?.response?.data?.message ||
+      e?.response?.data?.error ||
+      e?.message ||
+      ''
 
-    if (status === 404) {
-      error.value = 'No se encontró el endpoint de autenticación. Revisa la URL base del backend en src/api/http.js.'
-    } else if (status === 401 || status === 403) {
-      error.value = message || 'Usuario o contraseña inválidos.'
+    if (isInactiveUserError(rawMessage)) {
+      error.value = 'Tu usuario está inhabilitado. Comunícate con tu jefe inmediato o con el administrador del sistema.'
+    } else if (isExpiredUserError(rawMessage)) {
+      error.value = 'La vigencia de tu usuario finalizó. Comunícate con tu jefe inmediato o con el administrador del sistema.'
+    } else if (isNotStartedUserError(rawMessage)) {
+      error.value = 'Tu acceso todavía no está habilitado porque la vigencia no ha iniciado.'
+    } else if (isBadCredentialsError(status, rawMessage)) {
+      error.value = 'Usuario o contraseña inválidos.'
+    } else if (status === 404) {
+      error.value = 'En este momento no pudimos conectarnos al sistema. Intenta nuevamente en unos minutos.'
     } else {
-      error.value = message || 'No fue posible iniciar sesión. Revisa la conexión con el backend.'
+      error.value = 'No pudimos iniciar sesión en este momento. Intenta nuevamente o comunícate con soporte si el problema continúa.'
     }
   } finally {
     loading.value = false
@@ -238,21 +305,12 @@ const onSubmit = async () => {
   margin-bottom: 1.5rem;
 }
 
-.login-brand-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--primary) 0%, #79a9c7 100%);
-  position: relative;
+.login-brand-logo {
+  width: 74px;
+  height: 74px;
+  border-radius: 16px;
+  object-fit: contain;
   flex-shrink: 0;
-}
-
-.login-brand-mark::after {
-  content: '';
-  position: absolute;
-  inset: 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
 }
 
 .login-brand-title {
@@ -266,6 +324,12 @@ const onSubmit = async () => {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.forgot-password-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.35rem;
 }
 
 .login-note {

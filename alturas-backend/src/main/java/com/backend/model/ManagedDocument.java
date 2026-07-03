@@ -1,11 +1,20 @@
 package com.backend.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Document(collection = "managed_documents")
+@CompoundIndexes({
+        @CompoundIndex(name = "managed_documents_employee_uploaded_idx", def = "{ 'employeeId': 1, 'uploadedAt': -1 }"),
+        @CompoundIndex(name = "managed_documents_batch_uploaded_idx", def = "{ 'batchId': 1, 'uploadedAt': -1 }"),
+        @CompoundIndex(name = "managed_documents_area_uploaded_idx", def = "{ 'areaCode': 1, 'uploadedAt': -1 }")
+})
 public class ManagedDocument {
 
     @Id
@@ -22,6 +31,12 @@ public class ManagedDocument {
 
     private String uploadedBy;
     private LocalDateTime uploadedAt;
+
+    /*
+     * Fecha real del concepto/examen dentro del PDF.
+     * No reemplaza uploadedAt: uploadedAt es auditoría de carga; fechaConcepto es la fecha usada en reportes.
+     */
+    private LocalDate fechaConcepto;
 
     /*
      * Estados técnicos:
@@ -52,12 +67,17 @@ public class ManagedDocument {
      * SKIPPED
      */
     private String notificationStatus;
+    private String notificationError;
 
     private LocalDateTime notifiedAt;
 
     private AreaCode areaCode;
     private String batchId;
     private String batchCode;
+    private Boolean historical;
+
+    @Transient
+    private String resultStatus;
 
     public ManagedDocument() {
     }
@@ -102,6 +122,18 @@ public class ManagedDocument {
         return uploadedAt;
     }
 
+    public LocalDate getFechaConcepto() {
+        return fechaConcepto;
+    }
+
+    public LocalDate getFechaEvaluacion() {
+        return fechaConcepto;
+    }
+
+    public LocalDate getEvaluationDate() {
+        return fechaConcepto;
+    }
+
     public String getProcessingStatus() {
         return processingStatus;
     }
@@ -128,6 +160,28 @@ public class ManagedDocument {
 
     public LocalDateTime getNotifiedAt() {
         return notifiedAt;
+    }
+
+    public String getNotificationError() {
+        return notificationError;
+    }
+
+    public boolean isHistorical() {
+        if (Boolean.TRUE.equals(historical)) {
+            return true;
+        }
+
+        String status = processingStatus != null ? processingStatus : "";
+        String comment = reviewComment != null ? reviewComment : "";
+        String notification = notificationError != null ? notificationError : "";
+
+        return "STORED".equalsIgnoreCase(status)
+                || comment.toLowerCase().contains("carga historica")
+                || notification.toLowerCase().contains("carga historica");
+    }
+
+    public Boolean getHistorical() {
+        return historical;
     }
 
     public AreaCode getAreaCode() {
@@ -174,6 +228,18 @@ public class ManagedDocument {
         this.uploadedAt = uploadedAt;
     }
 
+    public void setFechaConcepto(LocalDate fechaConcepto) {
+        this.fechaConcepto = fechaConcepto;
+    }
+
+    public void setFechaEvaluacion(LocalDate fechaEvaluacion) {
+        this.fechaConcepto = fechaEvaluacion;
+    }
+
+    public void setEvaluationDate(LocalDate evaluationDate) {
+        this.fechaConcepto = evaluationDate;
+    }
+
     public void setProcessingStatus(String processingStatus) {
         this.processingStatus = processingStatus;
     }
@@ -202,7 +268,16 @@ public class ManagedDocument {
         this.notifiedAt = notifiedAt;
     }
 
+    public void setNotificationError(String notificationError) {
+        this.notificationError = notificationError;
+    }
+
+    public void setHistorical(Boolean historical) {
+        this.historical = historical;
+    }
+
     public void setAreaCode(AreaCode areaCode) { this.areaCode = areaCode; }
     public String getBatchId(){return batchId;} public void setBatchId(String batchId){this.batchId=batchId;}
     public String getBatchCode(){return batchCode;} public void setBatchCode(String batchCode){this.batchCode=batchCode;}
+    public String getResultStatus(){return resultStatus;} public void setResultStatus(String resultStatus){this.resultStatus=resultStatus;}
 }

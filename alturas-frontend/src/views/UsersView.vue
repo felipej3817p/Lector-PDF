@@ -107,10 +107,10 @@
             <button
               type="button"
               class="filter-chip success"
-              :class="{ active: roleFilter === 'SUPER_ADMIN' }"
-              @click="roleFilter = 'SUPER_ADMIN'"
+              :class="{ active: roleFilter === 'ADMIN' }"
+              @click="roleFilter = 'ADMIN'"
             >
-              Super admin
+              Admin
             </button>
 
             <button
@@ -120,6 +120,15 @@
               @click="roleFilter = 'APROBADOR'"
             >
               Aprobadores
+            </button>
+
+            <button
+              type="button"
+              class="filter-chip"
+              :class="{ active: roleFilter === 'IT' }"
+              @click="roleFilter = 'IT'"
+            >
+              Informática
             </button>
 
             <button
@@ -174,8 +183,9 @@
                 :disabled="loading"
               >
                 <option value="">Todos</option>
-                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                <option value="SUPER_ADMIN">ADMIN</option>
                 <option value="APROBADOR">APROBADOR</option>
+                <option value="IT">INFORMÁTICA</option>
                 <option value="OPERADOR">OPERADOR</option>
               </select>
             </div>
@@ -204,7 +214,7 @@
               >
                 <option value="">Todas</option>
                 <option v-for="area in areaOptions" :key="area" :value="area">
-                  {{ area }}
+                  {{ areaLabel(area) || area }}
                 </option>
               </select>
             </div>
@@ -253,16 +263,33 @@
             </div>
 
             <div class="form-field">
-              <label class="label" for="password">
-                Contraseña {{ editingId ? '(opcional)' : '' }}
+              <label v-if="editingId" class="label">Contraseña</label>
+              <label v-else class="label" for="password">Contraseña</label>
+
+              <label v-if="editingId" class="checkbox-field">
+                <input
+                  v-model="form.changePassword"
+                  type="checkbox"
+                  :disabled="saving"
+                  @change="handleChangePasswordToggle"
+                />
+                <span>Cambiar contraseña</span>
               </label>
+
               <input
+                v-if="!editingId || form.changePassword"
                 id="password"
                 v-model="form.password"
                 type="password"
                 class="form-control"
+                autocomplete="new-password"
+                placeholder="Ingresa una nueva contraseña"
                 :disabled="saving"
               />
+
+              <small v-if="editingId && !form.changePassword" class="helper-text">
+                La contraseña actual se conservará sin cambios.
+              </small>
             </div>
 
             <div class="form-field">
@@ -296,6 +323,18 @@
                   <input
                     type="radio"
                     name="role"
+                    value="IT"
+                    :checked="form.roles.includes('IT')"
+                    :disabled="saving"
+                    @change="selectRole('IT')"
+                  />
+                  <span>INFORMÁTICA</span>
+                </label>
+
+                <label class="checkbox-field">
+                  <input
+                    type="radio"
+                    name="role"
                     value="OPERADOR"
                     :checked="form.roles.includes('OPERADOR')"
                     :disabled="saving"
@@ -318,16 +357,30 @@
                   <input
                     type="checkbox"
                     :checked="form.allowedAreas.includes(area)"
-                    :disabled="saving || form.roles.includes('SUPER_ADMIN') || form.roles.includes('APROBADOR')"
+                    :disabled="saving || form.roles.includes('SUPER_ADMIN') || form.roles.includes('APROBADOR') || form.roles.includes('IT')"
                     @change="toggleArea(area)"
                   />
-                  <span>{{ area }}</span>
+                  <span>{{ areaLabel(area) || area }}</span>
                 </label>
               </div>
 
               <small class="helper-text">
                 Si el usuario es <strong>SUPER_ADMIN</strong> o <strong>APROBADOR</strong>,
                 las áreas pueden quedar vacías. El operador sí debe tener al menos un área.
+              </small>
+            </div>
+
+            <div class="form-field full-span">
+              <label class="label" for="accountExpirationDate">Vigencia del acceso</label>
+              <input
+                id="accountExpirationDate"
+                v-model="form.accountExpirationDate"
+                type="datetime-local"
+                class="form-control"
+                :disabled="saving"
+              />
+              <small class="helper-text">
+                Déjalo vacío si el usuario no tiene fecha límite. Cuando venza, no podrá iniciar sesión ni seguir usando el token.
               </small>
             </div>
 
@@ -402,6 +455,7 @@
                   <th>Rol</th>
                   <th>Áreas</th>
                   <th>Estado</th>
+                  <th>Vigencia</th>
                   <th class="text-center">Acciones</th>
                 </tr>
               </thead>
@@ -414,13 +468,15 @@
                   <td>
                     <span v-if="user.roles?.includes('SUPER_ADMIN')">TODAS</span>
                     <span v-else-if="user.roles?.includes('APROBADOR')">TODAS PARA REVISIÓN</span>
-                    <span v-else>{{ user.allowedAreas?.join(', ') || '-' }}</span>
+                    <span v-else-if="user.roles?.includes('IT')">CONFIGURACIÓN</span>
+                    <span v-else>{{ normalizeAreaList(user.allowedAreas || []).map(areaLabel).join(', ') || '-' }}</span>
                   </td>
                   <td>
                     <span :class="user.enabled ? 'status-pill-active' : 'status-pill-inactive'">
                       {{ user.enabled ? 'ACTIVO' : 'INACTIVO' }}
                     </span>
                   </td>
+                  <td>{{ formatDateTime(user.accountExpirationDate) }}</td>
                   <td>
                     <div class="actions justify-content-center">
                       <button
@@ -444,7 +500,7 @@
                 </tr>
 
                 <tr v-if="!filteredUsers.length">
-                  <td colspan="6">
+                  <td colspan="7">
                     <div class="state-box m-2">
                       No hay coincidencias con los filtros actuales.
                     </div>
@@ -463,6 +519,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { AREA_CODES, areaLabel, normalizeAreaCode, normalizeAreaList } from '../utils/areaCatalog'
 
 const auth = useAuthStore()
 
@@ -480,37 +537,54 @@ const roleFilter = ref('')
 const enabledFilter = ref('')
 const areaFilter = ref('')
 
-const allAreas = [
-  'CENTRO',
-  'NORTE',
-  'OCCIDENTE',
-  'ORIENTE',
-  'PUERTO',
-  'RICAURTE',
-  'SUGAMUXI',
-  'TUNDAMA',
-  'EDIFICIO'
-]
+const allAreas = AREA_CODES
 
 const buildInitialForm = () => ({
   username: '',
   email: '',
   password: '',
+  changePassword: false,
   roles: ['OPERADOR'],
   allowedAreas: [],
-  enabled: true
+  enabled: true,
+  accountExpirationDate: ''
 })
 
 const form = reactive(buildInitialForm())
 
 const normalize = (value) => String(value || '').toLowerCase().trim()
 
+const formatDateTime = (value) => {
+  if (!value) return 'Sin límite'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+
+  return date.toLocaleString('es-CO', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const toDateTimeLocal = (value) => {
+  if (!value) return ''
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
 const filteredUsers = computed(() => {
   const term = normalize(search.value)
 
   return users.value.filter((user) => {
     const userRoles = Array.isArray(user.roles) ? user.roles : []
-    const userAreas = Array.isArray(user.allowedAreas) ? user.allowedAreas : []
+    const userAreas = normalizeAreaList(Array.isArray(user.allowedAreas) ? user.allowedAreas : [])
 
     const matchesRole = !roleFilter.value || userRoles.includes(roleFilter.value)
     const matchesEnabled =
@@ -520,7 +594,7 @@ const filteredUsers = computed(() => {
       !areaFilter.value ||
       userRoles.includes('SUPER_ADMIN') ||
       userRoles.includes('APROBADOR') ||
-      userAreas.includes(areaFilter.value)
+      userAreas.includes(normalizeAreaCode(areaFilter.value))
 
     if (!matchesRole || !matchesEnabled || !matchesArea) {
       return false
@@ -532,7 +606,7 @@ const filteredUsers = computed(() => {
       user.username,
       user.email,
       userRoles.join(' '),
-      userAreas.join(' ')
+      userAreas.map(areaLabel).join(' ')
     ]
       .map(normalize)
       .join(' ')
@@ -561,10 +635,10 @@ const areaOptions = computed(() => {
   const usedAreas = new Set(allAreas)
 
   users.value.forEach((user) => {
-    ;(user.allowedAreas || []).forEach((area) => usedAreas.add(area))
+    normalizeAreaList(user.allowedAreas || []).forEach((area) => usedAreas.add(area))
   })
 
-  return [...usedAreas].sort((a, b) => a.localeCompare(b, 'es'))
+  return [...usedAreas].sort((a, b) => areaLabel(a).localeCompare(areaLabel(b), 'es'))
 })
 
 const loadUsers = async () => {
@@ -609,9 +683,11 @@ const startEdit = (user) => {
     username: user.username || '',
     email: user.email || '',
     password: '',
+    changePassword: false,
     roles: Array.isArray(user.roles) ? [...user.roles] : ['OPERADOR'],
-    allowedAreas: Array.isArray(user.allowedAreas) ? [...user.allowedAreas] : [],
-    enabled: Boolean(user.enabled)
+    allowedAreas: normalizeAreaList(Array.isArray(user.allowedAreas) ? user.allowedAreas : []),
+    enabled: Boolean(user.enabled),
+    accountExpirationDate: toDateTimeLocal(user.accountExpirationDate)
   })
 
   showForm.value = true
@@ -624,16 +700,22 @@ const closeForm = () => {
   showForm.value = false
 }
 
+const handleChangePasswordToggle = () => {
+  if (!form.changePassword) {
+    form.password = ''
+  }
+}
+
 const selectRole = (role) => {
   form.roles = [role]
 
-  if (role === 'SUPER_ADMIN' || role === 'APROBADOR') {
+  if (role === 'SUPER_ADMIN' || role === 'APROBADOR' || role === 'IT') {
     form.allowedAreas = []
   }
 }
 
 const toggleArea = (area) => {
-  if (form.roles.includes('SUPER_ADMIN') || form.roles.includes('APROBADOR')) return
+  if (form.roles.includes('SUPER_ADMIN') || form.roles.includes('APROBADOR') || form.roles.includes('IT')) return
 
   const exists = form.allowedAreas.includes(area)
 
@@ -646,9 +728,10 @@ const validateForm = () => {
   if (!form.username.trim()) return 'El usuario es obligatorio.'
   if (!form.email.trim()) return 'El correo es obligatorio.'
   if (!editingId.value && !form.password) return 'La contraseña es obligatoria.'
+  if (editingId.value && form.changePassword && !form.password) return 'Ingresa la nueva contraseña.'
   if (!form.roles.length) return 'Debes seleccionar un rol.'
 
-  if (form.roles.includes('OPERADOR') && form.allowedAreas.length === 0) {
+  if ((form.roles.includes('OPERADOR') || form.roles.includes('VISUALIZADOR')) && form.allowedAreas.length === 0) {
     return 'Un operador debe tener al menos un área asignada.'
   }
 
@@ -671,13 +754,14 @@ const saveUser = async () => {
     const payload = {
       username: form.username.trim(),
       email: form.email.trim(),
-      password: form.password || undefined,
+      password: !editingId.value || form.changePassword ? form.password : undefined,
       roles: form.roles,
       allowedAreas:
-        form.roles.includes('SUPER_ADMIN') || form.roles.includes('APROBADOR')
+        form.roles.includes('SUPER_ADMIN') || form.roles.includes('APROBADOR') || form.roles.includes('IT')
           ? []
-          : form.allowedAreas,
-      enabled: form.enabled
+          : normalizeAreaList(form.allowedAreas),
+      enabled: form.enabled,
+      accountExpirationDate: form.accountExpirationDate || null
     }
 
     if (!editingId.value) {

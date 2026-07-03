@@ -41,14 +41,10 @@
       </div>
 
       <div class="summary-card">
-        <span class="label">Área asignada</span>
+        <span class="label">Zona o área</span>
         <span>{{ form.areaCode || '-' }}</span>
       </div>
 
-      <div class="summary-card">
-        <span class="label">Estado</span>
-        <span>{{ form.active ? 'ACTIVO' : 'INACTIVO' }}</span>
-      </div>
     </div>
 
     <div class="card border-0">
@@ -73,7 +69,7 @@
               class="form-select"
               :disabled="loading || saving"
             >
-              <option value="">Seleccione</option>
+              <option value="">Sin zona asignada</option>
               <option value="CC">CC</option>
               <option value="CE">CE</option>
               <option value="TI">TI</option>
@@ -194,19 +190,7 @@
           </div>
 
           <div class="form-field">
-            <label class="label" for="workArea">Área / dependencia</label>
-            <input
-              id="workArea"
-              v-model.trim="form.workArea"
-              type="text"
-              class="form-control"
-              placeholder="Área o dependencia"
-              :disabled="loading || saving"
-            />
-          </div>
-
-          <div class="form-field">
-            <label class="label" for="areaCode">Área permitida / regional</label>
+            <label class="label" for="areaCode">Zona o área de trabajo</label>
             <select
               id="areaCode"
               v-model="form.areaCode"
@@ -215,11 +199,11 @@
             >
               <option value="">Seleccione</option>
               <option v-for="area in areaOptions" :key="area" :value="area">
-                {{ area }}
+                {{ areaLabel(area) || area }}
               </option>
             </select>
-            <small v-if="!auth.isSuperAdmin" class="helper-text">
-              Solo puedes asignar personas a tus áreas permitidas.
+            <small v-if="!auth.isAdmin" class="helper-text">
+              Solo puedes asignar personas a tus zonas o áreas permitidas.
             </small>
           </div>
 
@@ -257,20 +241,6 @@
               placeholder="ARL"
               :disabled="loading || saving"
             />
-          </div>
-
-          <div class="form-field full-span">
-            <label class="label">Estado de la persona</label>
-            <div class="field-card">
-              <label class="checkbox-field">
-                <input
-                  v-model="form.active"
-                  type="checkbox"
-                  :disabled="loading || saving"
-                />
-                <span>Mantener persona activa</span>
-              </label>
-            </div>
           </div>
 
           <div class="full-span actions-row">
@@ -333,6 +303,7 @@ import { createEmployee, getEmployeeById, updateEmployee } from '../api/employee
 import { getDocumentsByEmployeeId } from '../api/document'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { AREA_CODES, areaLabel, normalizeAreaCode } from '../utils/areaCatalog'
 
 const route = useRoute()
 const router = useRouter()
@@ -347,22 +318,12 @@ const error = ref('')
 const historyRows = ref([])
 const historyLoading = ref(false)
 
-const allAreas = [
-  'CENTRO',
-  'NORTE',
-  'OCCIDENTE',
-  'ORIENTE',
-  'PUERTO',
-  'RICAURTE',
-  'SUGAMUXI',
-  'TUNDAMA',
-  'EDIFICIO'
-]
+const allAreas = AREA_CODES
 
 const areaOptions = computed(() => {
-  if (auth.isSuperAdmin) return allAreas
+  if (auth.isAdmin) return allAreas
   return Array.isArray(auth.allowedAreas) && auth.allowedAreas.length
-    ? auth.allowedAreas
+    ? auth.allowedAreas.map(normalizeAreaCode).filter(Boolean)
     : []
 })
 
@@ -381,9 +342,9 @@ const initialFormState = () => ({
   arl: '',
   email: '',
   zone: '',
-  areaCode: auth.isSuperAdmin
+  areaCode: auth.isAdmin
     ? ''
-    : (Array.isArray(auth.allowedAreas) && auth.allowedAreas.length === 1 ? auth.allowedAreas[0] : ''),
+    : (Array.isArray(auth.allowedAreas) && auth.allowedAreas.length === 1 ? normalizeAreaCode(auth.allowedAreas[0]) : ''),
   active: true
 })
 
@@ -408,6 +369,23 @@ const formatDate = (value) => {
   if (!value) return '-'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('es-CO')
+}
+
+const normalizeDateForPayload = (value) => {
+  const text = String(value || '').trim()
+  if (!text) return ''
+
+  const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (isoDate) return text
+
+  const localDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (localDate) {
+    const day = localDate[1].padStart(2, '0')
+    const month = localDate[2].padStart(2, '0')
+    return `${localDate[3]}-${month}-${day}`
+  }
+
+  return text
 }
 
 const reviewLabel = (status) => {
@@ -440,7 +418,7 @@ const setFormData = (data = {}) => {
   form.arl = data.arl || ''
   form.email = data.email || ''
   form.zone = data.zone || ''
-  form.areaCode = data.areaCode || ''
+  form.areaCode = normalizeAreaCode(data.areaCode) || ''
   form.active = typeof data.active === 'boolean' ? data.active : true
 }
 
@@ -467,22 +445,12 @@ const validateForm = () => {
     return false
   }
 
-  if (!form.currentPosition.trim()) {
-    error.value = 'El cargo es obligatorio.'
+  if (!form.email.trim()) {
+    error.value = 'El correo es obligatorio.'
     return false
   }
 
-  if (!form.workArea.trim()) {
-    error.value = 'El área o dependencia es obligatoria.'
-    return false
-  }
-
-  if (!form.areaCode) {
-    error.value = 'El área permitida es obligatoria.'
-    return false
-  }
-
-  if (!auth.isSuperAdmin && !areaOptions.value.includes(form.areaCode)) {
+  if (form.areaCode && !auth.isAdmin && !areaOptions.value.includes(normalizeAreaCode(form.areaCode))) {
     error.value = 'No tienes permiso para asignar personas a esa área.'
     return false
   }
@@ -498,14 +466,14 @@ const buildPayload = () => ({
   firstLastName: form.firstLastName.trim(),
   secondLastName: form.secondLastName.trim(),
   gender: form.gender,
-  birthDate: form.birthDate || '',
+  birthDate: normalizeDateForPayload(form.birthDate),
   workArea: form.workArea.trim(),
   currentPosition: form.currentPosition.trim(),
   employer: form.employer.trim(),
   arl: form.arl.trim(),
   email: form.email.trim(),
   zone: form.zone.trim(),
-  areaCode: form.areaCode || null,
+  areaCode: normalizeAreaCode(form.areaCode) || null,
   active: form.active
 })
 

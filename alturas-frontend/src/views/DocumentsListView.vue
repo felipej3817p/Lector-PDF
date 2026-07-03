@@ -3,11 +3,14 @@ import { computed, onMounted, ref } from 'vue'
 import { getDocuments } from '../api/document'
 import { getEmployees } from '../api/employee'
 import http from '../api/http'
+import { useAuthStore } from '../stores/auth'
 
+const auth = useAuthStore()
 const documents = ref([])
 const employees = ref([])
 const analysisById = ref({})
 const loading = ref(false)
+const backfillLoading = ref(false)
 const error = ref('')
 
 const search = ref('')
@@ -35,6 +38,9 @@ const formatDateTime = (value) => {
 
 const formatDatePart = (value) => {
   if (!value) return '-'
+  const localDate = formatLocalDate(value)
+  if (localDate !== null) return localDate
+
   try {
     return new Date(value).toLocaleDateString()
   } catch {
@@ -53,11 +59,19 @@ const formatTimePart = (value) => {
 
 const formatDateOnly = (value) => {
   if (!value) return ''
+  const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`
+
   try {
     return new Date(value).toISOString().slice(0, 10)
   } catch {
     return ''
   }
+}
+
+const formatLocalDate = (value) => {
+  const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : null
 }
 
 const shortText = (value, max = 110) => {
@@ -123,6 +137,15 @@ const rows = computed(() => {
           : 'PENDIENTE'
 
       const observations = analysis?.extractedFields?.observations || ''
+      const evaluationDate =
+        doc.evaluationDate ||
+        doc.fechaEvaluacion ||
+        doc.fechaConcepto ||
+        analysis?.evaluationDate ||
+        analysis?.fechaEvaluacion ||
+        analysis?.fechaConcepto ||
+        analysis?.conceptDate ||
+        ''
 
       return {
         id: doc.id,
@@ -142,6 +165,9 @@ const rows = computed(() => {
         uploadedDatePart: formatDatePart(doc.uploadedAt),
         uploadedTimePart: formatTimePart(doc.uploadedAt),
         uploadedDateOnly: formatDateOnly(doc.uploadedAt),
+        evaluationDate,
+        evaluationDateLabel: evaluationDate ? formatDatePart(evaluationDate) : '-',
+        evaluationDateOnly: evaluationDate ? String(evaluationDate).slice(0, 10) : '',
         resultStatus,
         analysisState,
         observations,
@@ -149,7 +175,7 @@ const rows = computed(() => {
         processingStatus: doc.processingStatus || '-'
       }
     })
-    .sort((a, b) => parseDate(b.uploadedAt) - parseDate(a.uploadedAt))
+    .sort((a, b) => parseDate(b.evaluationDate || b.uploadedAt) - parseDate(a.evaluationDate || a.uploadedAt))
 })
 
 const filteredRows = computed(() => {
@@ -158,7 +184,7 @@ const filteredRows = computed(() => {
   return rows.value.filter((row) => {
     const matchesResult = !resultFilter.value || row.resultStatus === resultFilter.value
     const matchesUploader = !uploadedByFilter.value || row.uploadedBy === uploadedByFilter.value
-    const matchesDate = !dateFilter.value || row.uploadedDateOnly === dateFilter.value
+    const matchesDate = !dateFilter.value || row.evaluationDateOnly === dateFilter.value
     const matchesStatus = !statusFilter.value || row.analysisState === statusFilter.value
 
     if (!matchesResult || !matchesUploader || !matchesDate || !matchesStatus) {
@@ -198,12 +224,12 @@ const todayCount = computed(() => {
 })
 
 const lastUploadLabel = computed(() => {
-  return rows.value.length ? rows.value[0].uploadedAtLabel : 'Sin registros'
+  return rows.value.length ? rows.value[0].evaluationDateLabel : 'Sin registros'
 })
 
 const latestCriticalLabel = computed(() => {
   const firstCritical = rows.value.find((row) => row.resultStatus === 'NO_APTO')
-  return firstCritical ? `${firstCritical.fullName} • ${firstCritical.uploadedAtLabel}` : 'Sin casos NO APTO'
+  return firstCritical ? `${firstCritical.fullName} • ${firstCritical.evaluationDateLabel}` : 'Sin casos NO APTO'
 })
 
 const uploaderOptions = computed(() => {
@@ -243,8 +269,8 @@ const escapeCsv = (value) => {
 
 const exportCsv = () => {
   const headers = [
+    'fecha_evaluacion',
     'fecha_carga',
-    'hora_carga',
     'archivo_pdf',
     'funcionario',
     'documento',
@@ -258,8 +284,8 @@ const exportCsv = () => {
   ]
 
   const csvRows = filteredRows.value.map((row) => ({
+    fecha_evaluacion: row.evaluationDateLabel,
     fecha_carga: row.uploadedDatePart,
-    hora_carga: row.uploadedTimePart,
     archivo_pdf: row.originalFileName,
     funcionario: row.fullName,
     documento: row.documentLabel,
@@ -297,7 +323,7 @@ const loadDocuments = async () => {
     error.value = ''
 
     const [documentsResponse, employeesResponse] = await Promise.all([
-      getDocuments(),
+      getDocuments({ historical: false }),
       getEmployees()
     ])
 
@@ -328,6 +354,56 @@ const loadDocuments = async () => {
   }
 }
 
+const backfillExtractedData = async () => {
+  const confirmed = window.confirm('Esto reanaliza documentos antiguos para completar fecha de evaluación y fecha de nacimiento sin cambiar la trazabilidad. ¿Continuar?')
+  if (!confirmed) return
+
+  try {
+    backfillLoading.value = true
+    error.value = ''
+
+    const { data } = await http.post('/api/documents/backfill-extracted-data')
+    await loadDocuments()
+
+    window.alert(`Reproceso terminado. Revisados: ${data?.checked ?? 0}. Actualizados: ${data?.updated ?? 0}. Errores: ${data?.failed ?? 0}.`)
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'No se pudo reprocesar la información extraída.'
+  } finally {
+    backfillLoading.value = false
+  }
+}
+
+const viewPdf = async (documentId) => {
+  if (!documentId) return
+
+  const pdfWindow = window.open('', '_blank')
+  if (pdfWindow) {
+    pdfWindow.document.write('Cargando PDF...')
+  }
+
+  try {
+    const response = await http.get(`/api/documents/${documentId}/view`, {
+      responseType: 'blob'
+    })
+
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+
+    if (pdfWindow) {
+      pdfWindow.location.href = url
+    } else {
+      window.open(url, '_blank')
+    }
+
+    // Clean up URL object after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (err) {
+    if (pdfWindow) pdfWindow.close()
+    console.error('Error abriendo PDF:', err)
+    alert('No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.')
+  }
+}
+
 onMounted(() => {
   loadDocuments()
 })
@@ -351,6 +427,15 @@ onMounted(() => {
 
         <button class="secondary-btn" :disabled="loading || !filteredRows.length" @click="exportCsv">
           Exportar CSV
+        </button>
+
+        <button
+          v-if="auth.canDeleteDocuments"
+          class="secondary-btn"
+          :disabled="loading || backfillLoading"
+          @click="backfillExtractedData"
+        >
+          {{ backfillLoading ? 'Reprocesando...' : 'Reprocesar fechas' }}
         </button>
 
         <RouterLink to="/documents/upload" class="primary-btn">
@@ -541,7 +626,7 @@ onMounted(() => {
           </div>
 
           <div class="form-field">
-            <label class="label" for="dateFilter">Fecha de carga</label>
+            <label class="label" for="dateFilter">Fecha de evaluación</label>
             <input
               id="dateFilter"
               v-model="dateFilter"
@@ -579,7 +664,7 @@ onMounted(() => {
           <table class="table table-hover align-middle">
             <thead>
               <tr>
-                <th>Fecha / hora</th>
+                <th>Fecha evaluación</th>
                 <th>Archivo PDF</th>
                 <th>Funcionario</th>
                 <th>Documento</th>
@@ -599,8 +684,8 @@ onMounted(() => {
               >
                 <td>
                   <div class="date-stack">
-                    <strong>{{ row.uploadedDatePart }}</strong>
-                    <small>{{ row.uploadedTimePart }}</small>
+                    <strong>{{ row.evaluationDateLabel }}</strong>
+                    <small>Carga: {{ row.uploadedDatePart }}</small>
                   </div>
                 </td>
 
@@ -659,6 +744,15 @@ onMounted(() => {
                     <RouterLink :to="`/documents/${row.id}`" class="secondary-btn">
                       Ver detalle
                     </RouterLink>
+
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      title="Ver PDF original"
+                      @click="viewPdf(row.id)"
+                    >
+                      Ver PDF
+                    </button>
                   </div>
                 </td>
               </tr>

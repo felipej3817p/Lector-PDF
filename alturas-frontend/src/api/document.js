@@ -1,6 +1,6 @@
 import http from './http'
 
-export const getDocuments = () => http.get('/api/documents')
+export const getDocuments = (params = {}) => http.get('/api/documents', { params })
 
 export const getDocumentById = (id) => http.get(`/api/documents/${id}`)
 
@@ -50,3 +50,19 @@ export const getDocumentBatches = () =>
 
 export const notifyApproverBatch = (id) =>
   http.post(`/api/document-batches/${id}/notify-approver`)
+
+export const getHistoricalImportIssues = (batchId = '') =>
+  http.get('/api/documents/historical/issues', {
+    params: batchId ? { batchId } : {}
+  })
+
+export const deleteHistoricalImportIssue = (id) =>
+  http.delete(`/api/documents/historical/issues/${id}`)
+
+export const deleteAllHistoricalImportIssues = () =>
+  http.delete('/api/documents/historical/issues/all')
+
+export const viewHistoricalImportIssuePdf = (id) =>
+  http.get(`/api/documents/historical/issues/${id}/view`, {
+    responseType: 'blob'
+  })

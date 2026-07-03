@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL || '').trim() ||
-  'http://localhost:8080'
+  ''
 
 const LOGIN_PATH = '/login'
 let redirectingToLogin = false
@@ -22,10 +22,10 @@ const http = axios.create({
   baseURL: API_BASE_URL,
 
   /*
-   * Carga masiva de PDFs puede tardar.
-   * 180000 ms = 3 minutos.
+   * Carga masiva de PDFs puede tardar, especialmente con PDFs escaneados.
+   * 600000 ms = 10 minutos.
    */
-  timeout: 180000,
+  timeout: 600000,
 
   headers: {
     Accept: 'application/json'

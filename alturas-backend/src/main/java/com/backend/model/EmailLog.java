@@ -1,18 +1,30 @@
 package com.backend.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
 @Document(collection = "email_logs")
+@CompoundIndexes({
+        @CompoundIndex(name = "email_logs_document_created_idx", def = "{ 'documentId': 1, 'createdAt': -1 }"),
+        @CompoundIndex(name = "email_logs_batch_created_idx", def = "{ 'batchId': 1, 'createdAt': -1 }")
+})
 public class EmailLog {
 
     @Id
     private String id;
 
+    @Indexed(name = "email_logs_document_idx")
     private String documentId;
+
+    @Indexed(name = "email_logs_batch_idx")
     private String batchId;
+
+    @Indexed(name = "email_logs_employee_idx")
     private String employeeId;
     private String type;
     private String triggeredBy;

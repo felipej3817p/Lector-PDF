@@ -64,7 +64,7 @@ public class ApprovedExportService {
     private List<ManagedDocument> getScopedDocuments() {
         User currentUser = accessScopeService.getCurrentUser();
 
-        if (accessScopeService.isSuperAdmin(currentUser)) {
+        if (accessScopeService.hasGlobalDocumentAccess(currentUser)) {
             return managedDocumentRepository.findAll();
         }
 

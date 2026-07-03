@@ -7,6 +7,7 @@ import com.backend.model.Employee;
 import com.backend.model.ManagedDocument;
 import com.backend.model.User;
 import com.backend.repository.DocumentAnalysisRepository;
+import com.backend.repository.EmailLogRepository;
 import com.backend.repository.EmployeeRepository;
 import com.backend.repository.ManagedDocumentRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +20,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentService {
@@ -30,6 +34,7 @@ public class DocumentService {
     private final EmployeeRepository employeeRepository;
     private final AccessScopeService accessScopeService;
     private final DocumentAnalysisRepository documentAnalysisRepository;
+    private final EmailLogRepository emailLogRepository;
     private final EmailSendService emailSendService;
 
     @Value("${app.storage.documents-dir:uploads/documents}")
@@ -40,21 +45,35 @@ public class DocumentService {
             EmployeeRepository employeeRepository,
             AccessScopeService accessScopeService,
             DocumentAnalysisRepository documentAnalysisRepository,
+            EmailLogRepository emailLogRepository,
             EmailSendService emailSendService
     ) {
         this.managedDocumentRepository = managedDocumentRepository;
         this.employeeRepository = employeeRepository;
         this.accessScopeService = accessScopeService;
         this.documentAnalysisRepository = documentAnalysisRepository;
+        this.emailLogRepository = emailLogRepository;
         this.emailSendService = emailSendService;
     }
 
     public List<ManagedDocument> getAllDocuments() {
+        return getAllDocuments(true);
+    }
+
+    public List<ManagedDocument> getAllDocuments(boolean includeHistorical) {
         User currentUser = accessScopeService.getCurrentUser();
 
         List<ManagedDocument> documents = accessScopeService.hasGlobalDocumentAccess(currentUser)
                 ? managedDocumentRepository.findAll()
                 : managedDocumentRepository.findByAreaCodeIn(accessScopeService.getAllowedAreas(currentUser));
+
+        if (!includeHistorical) {
+            documents = documents.stream()
+                    .filter(document -> document != null && !document.isHistorical())
+                    .toList();
+        }
+
+        attachAnalysisResults(documents);
 
         return documents.stream()
                 .sorted(
@@ -66,16 +85,16 @@ public class DocumentService {
                 .toList();
     }
 
-
     public List<ManagedDocument> getDocumentsByEmployeeId(String employeeId) {
         employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new IllegalArgumentException("No se encontró la persona asociada."));
 
         List<ManagedDocument> documents = managedDocumentRepository.findByEmployeeIdOrderByUploadedAtDesc(employeeId);
 
-        return documents.stream()
-                .peek(document -> accessScopeService.validateAreaAccess(document.getAreaCode()))
-                .toList();
+        documents.forEach(document -> accessScopeService.validateAreaAccess(document.getAreaCode()));
+        attachAnalysisResults(documents);
+
+        return documents;
     }
 
     public ManagedDocument getDocumentById(String id) {
@@ -84,11 +103,129 @@ public class DocumentService {
 
         accessScopeService.validateAreaAccess(document.getAreaCode());
 
-        return document;
+        return attachAnalysisResult(document);
     }
 
     public ManagedDocument findById(String id) {
         return getDocumentById(id);
+    }
+
+    private ManagedDocument attachAnalysisResult(ManagedDocument document) {
+        if (document == null || document.getId() == null || document.getId().isBlank()) {
+            return document;
+        }
+
+        documentAnalysisRepository.findByDocumentId(document.getId())
+                .map(DocumentAnalysis::getResultStatus)
+                .ifPresent(document::setResultStatus);
+
+        applyEffectiveWorkflowStatus(document);
+
+        return document;
+    }
+
+    private void attachAnalysisResults(List<ManagedDocument> documents) {
+        List<String> documentIds = documents.stream()
+                .map(ManagedDocument::getId)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
+
+        if (documentIds.isEmpty()) {
+            return;
+        }
+
+        Map<String, String> resultByDocumentId = documentAnalysisRepository.findByDocumentIdIn(documentIds).stream()
+                .filter(analysis -> analysis.getDocumentId() != null)
+                .collect(Collectors.toMap(
+                        DocumentAnalysis::getDocumentId,
+                        DocumentAnalysis::getResultStatus,
+                        (first, second) -> first
+                ));
+
+        Map<String, EmailLog> latestWorkerLogByDocumentId = new HashMap<>();
+        emailLogRepository.findByDocumentIdIn(documentIds).stream()
+                .filter(log -> log.getDocumentId() != null)
+                .filter(this::isWorkerNotification)
+                .forEach(log -> latestWorkerLogByDocumentId.merge(
+                        log.getDocumentId(),
+                        log,
+                        this::latestLog
+                ));
+
+        documents.forEach(document -> {
+            String resultStatus = resultByDocumentId.get(document.getId());
+
+            if (resultStatus != null) {
+                document.setResultStatus(resultStatus);
+            }
+
+            applyEffectiveWorkflowStatus(document, latestWorkerLogByDocumentId.get(document.getId()));
+        });
+    }
+
+    private void applyEffectiveWorkflowStatus(ManagedDocument document) {
+        List<EmailLog> logs = emailLogRepository.findByDocumentIdOrderByCreatedAtDesc(document.getId());
+
+        EmailLog latestWorkerLog = logs.stream()
+                .filter(this::isWorkerNotification)
+                .findFirst()
+                .orElse(null);
+
+        applyEffectiveWorkflowStatus(document, latestWorkerLog);
+    }
+
+    private void applyEffectiveWorkflowStatus(ManagedDocument document, EmailLog latestWorkerLog) {
+        if (latestWorkerLog == null) {
+            return;
+        }
+
+        String workerStatus = safe(latestWorkerLog.getStatus()).toUpperCase();
+
+        if ("SENT".equals(workerStatus)) {
+            document.setNotificationStatus("SENT");
+            document.setNotificationError(safe(latestWorkerLog.getErrorMessage()));
+
+            if (document.getNotifiedAt() == null && latestWorkerLog.getSentAt() != null) {
+                document.setNotifiedAt(latestWorkerLog.getSentAt());
+            }
+        } else if ("FAILED".equals(workerStatus) && !"SENT".equals(safe(document.getNotificationStatus()).toUpperCase())) {
+            document.setNotificationStatus("FAILED");
+            document.setNotificationError(safe(latestWorkerLog.getErrorMessage()));
+        }
+
+        String reviewStatus = safe(document.getReviewStatus()).toUpperCase();
+        if (!"APPROVED".equals(reviewStatus) && !"REJECTED".equals(reviewStatus)) {
+            document.setReviewStatus(isRejectedNotification(latestWorkerLog) ? "REJECTED" : "APPROVED");
+        }
+    }
+
+    private boolean isWorkerNotification(EmailLog log) {
+        String type = safe(log.getType()).toUpperCase();
+        return "WORKER_NOTIFICATION".equals(type) || "WORKER_NOTIFICATION_RESEND".equals(type);
+    }
+
+    private EmailLog latestLog(EmailLog first, EmailLog second) {
+        LocalDateTime firstDate = first.getCreatedAt() != null ? first.getCreatedAt() : first.getAttemptedAt();
+        LocalDateTime secondDate = second.getCreatedAt() != null ? second.getCreatedAt() : second.getAttemptedAt();
+
+        if (firstDate == null && secondDate == null) {
+            return Objects.toString(second.getId(), "").compareTo(Objects.toString(first.getId(), "")) > 0
+                    ? second
+                    : first;
+        }
+        if (firstDate == null) {
+            return second;
+        }
+        if (secondDate == null) {
+            return first;
+        }
+
+        return secondDate.isAfter(firstDate) ? second : first;
+    }
+
+    private boolean isRejectedNotification(EmailLog log) {
+        String text = (safe(log.getSubject()) + " " + safe(log.getBody())).toLowerCase();
+        return text.contains("rechaz");
     }
 
     public ManagedDocument save(ManagedDocument document) {
@@ -162,6 +299,7 @@ public class DocumentService {
             document.setNotificationStatus("NOT_PENDING");
 
             document.setAreaCode(resolvedArea);
+            document.setHistorical(false);
 
             return managedDocumentRepository.save(document);
         } catch (IOException e) {
@@ -195,10 +333,18 @@ public class DocumentService {
         document.setReviewedAt(LocalDateTime.now());
         document.setReviewComment(safe(comment));
         document.setProcessingStatus("ANALYZED");
+        document.setNotificationStatus("NOT_PENDING");
+        document.setNotificationError("");
+
+        /*
+         * Se guarda primero para que el correo tome reviewStatus y reviewComment actualizados.
+         */
+        document = managedDocumentRepository.save(document);
 
         EmailLog emailLog = emailSendService.sendAnalysisEmailIfEnabled(id);
 
         document.setNotificationStatus(emailLog.getStatus());
+        document.setNotificationError(safe(emailLog.getErrorMessage()));
 
         if ("SENT".equals(emailLog.getStatus())) {
             document.setNotifiedAt(emailLog.getSentAt());
@@ -219,32 +365,107 @@ public class DocumentService {
 
         ManagedDocument document = getDocumentById(id);
 
+        DocumentAnalysis analysis = documentAnalysisRepository.findByDocumentId(id)
+                .orElseThrow(() -> new IllegalArgumentException("El documento debe tener análisis antes de rechazar."));
+
+        String resultStatus = normalizeResultStatus(analysis.getResultStatus());
+
+        if (!"APTO".equals(resultStatus) && !"NO_APTO".equals(resultStatus)) {
+            throw new IllegalArgumentException("Solo se pueden rechazar documentos con resultado APTO o NO_APTO.");
+        }
+
         document.setReviewStatus("REJECTED");
         document.setReviewedBy(currentUser.getUsername());
         document.setReviewedAt(LocalDateTime.now());
         document.setReviewComment(safe(comment));
-        document.setNotificationStatus("SKIPPED");
+        document.setProcessingStatus("ANALYZED");
+        document.setNotificationStatus("NOT_PENDING");
+        document.setNotificationError("");
+
+        /*
+         * Se guarda primero para que el correo tome reviewStatus y reviewComment actualizados.
+         */
+        document = managedDocumentRepository.save(document);
+
+        EmailLog emailLog = emailSendService.sendAnalysisEmailIfEnabled(id);
+
+        document.setNotificationStatus(emailLog.getStatus());
+        document.setNotificationError(safe(emailLog.getErrorMessage()));
+
+        if ("SENT".equals(emailLog.getStatus())) {
+            document.setNotifiedAt(emailLog.getSentAt());
+        }
 
         return managedDocumentRepository.save(document);
     }
 
-
     public Map<String, Object> approveBulk(List<String> documentIds, String comment) {
         accessScopeService.assertCanReviewDocuments();
-        int approved = 0; int failed = 0;
-        List<Map<String,String>> errors = new java.util.ArrayList<>();
+
+        int approved = 0;
+        int failed = 0;
+        List<Map<String, String>> errors = new java.util.ArrayList<>();
+
         for (String id : documentIds) {
-            try { approveAndNotify(id, comment); approved++; }
-            catch (Exception ex) { failed++; Map<String,String> e=new java.util.LinkedHashMap<>(); e.put("documentId", id); e.put("error", ex.getMessage()); errors.add(e);} }
-        Map<String,Object> out = new java.util.LinkedHashMap<>(); out.put("total", documentIds.size()); out.put("approved", approved); out.put("failed", failed); out.put("errors", errors); return out;
+            try {
+                approveAndNotify(id, comment);
+                approved++;
+            } catch (Exception ex) {
+                failed++;
+                Map<String, String> error = new java.util.LinkedHashMap<>();
+                error.put("documentId", id);
+                error.put("error", ex.getMessage());
+                errors.add(error);
+            }
+        }
+
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("total", documentIds.size());
+        out.put("approved", approved);
+        out.put("failed", failed);
+        out.put("errors", errors);
+
+        return out;
     }
 
     public Map<String, Object> rejectBulk(List<String> documentIds, String comment) {
         accessScopeService.assertCanReviewDocuments();
-        int rejected = 0; int failed = 0;
-        List<Map<String,String>> errors = new java.util.ArrayList<>();
-        for (String id : documentIds) { try { rejectReview(id, comment); rejected++; } catch (Exception ex) { failed++; Map<String,String> e=new java.util.LinkedHashMap<>(); e.put("documentId", id); e.put("error", ex.getMessage()); errors.add(e);} }
-        Map<String,Object> out = new java.util.LinkedHashMap<>(); out.put("total", documentIds.size()); out.put("rejected", rejected); out.put("failed", failed); out.put("errors", errors); return out;
+
+        int rejected = 0;
+        int failed = 0;
+        List<Map<String, String>> errors = new java.util.ArrayList<>();
+
+        for (String id : documentIds) {
+            try {
+                rejectReview(id, comment);
+                rejected++;
+            } catch (Exception ex) {
+                failed++;
+                Map<String, String> error = new java.util.LinkedHashMap<>();
+                error.put("documentId", id);
+                error.put("error", ex.getMessage());
+                errors.add(error);
+            }
+        }
+
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("total", documentIds.size());
+        out.put("rejected", rejected);
+        out.put("failed", failed);
+        out.put("errors", errors);
+
+        return out;
+    }
+
+    public org.springframework.core.io.Resource getDocumentFile(String id) {
+        ManagedDocument document = getDocumentById(id);
+        Path path = Paths.get(document.getFilePath());
+        
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException("No se encontró el archivo físico del documento.");
+        }
+        
+        return new org.springframework.core.io.FileSystemResource(path);
     }
 
     public void deleteDocument(String id) {
@@ -262,6 +483,11 @@ public class DocumentService {
 
         documentAnalysisRepository.findByDocumentId(id)
                 .ifPresent(documentAnalysisRepository::delete);
+
+        List<EmailLog> emailLogs = emailLogRepository.findByDocumentId(id);
+        if (!emailLogs.isEmpty()) {
+            emailLogRepository.deleteAll(emailLogs);
+        }
 
         managedDocumentRepository.delete(document);
     }

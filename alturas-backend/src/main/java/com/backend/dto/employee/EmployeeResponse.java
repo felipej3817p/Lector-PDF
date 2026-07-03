@@ -2,6 +2,9 @@ package com.backend.dto.employee;
 
 import com.backend.model.AreaCode;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 public class EmployeeResponse {
 
     private String id;
@@ -21,6 +24,17 @@ public class EmployeeResponse {
     private String zone;
     private AreaCode areaCode;
     private boolean active;
+    private boolean currentlyActive;
+    private LocalDateTime activeStartDate;
+    private LocalDateTime activeExpirationDate;
+    private LocalDateTime createdAt;
+    private String createdBy;
+    private LocalDateTime updatedAt;
+    private String updatedBy;
+    private LocalDateTime statusChangedAt;
+    private String statusChangedBy;
+    private LocalDate latestFechaEvaluacion;
+    private String latestResultStatus;
 
     public EmployeeResponse() {
     }
@@ -42,7 +56,18 @@ public class EmployeeResponse {
             String email,
             String zone,
             AreaCode areaCode,
-            boolean active
+            boolean active,
+            boolean currentlyActive,
+            LocalDateTime activeStartDate,
+            LocalDateTime activeExpirationDate,
+            LocalDateTime createdAt,
+            String createdBy,
+            LocalDateTime updatedAt,
+            String updatedBy,
+            LocalDateTime statusChangedAt,
+            String statusChangedBy,
+            LocalDate latestFechaEvaluacion,
+            String latestResultStatus
     ) {
         this.id = id;
         this.documentType = documentType;
@@ -61,6 +86,17 @@ public class EmployeeResponse {
         this.zone = zone;
         this.areaCode = areaCode;
         this.active = active;
+        this.currentlyActive = currentlyActive;
+        this.activeStartDate = activeStartDate;
+        this.activeExpirationDate = activeExpirationDate;
+        this.createdAt = createdAt;
+        this.createdBy = createdBy;
+        this.updatedAt = updatedAt;
+        this.updatedBy = updatedBy;
+        this.statusChangedAt = statusChangedAt;
+        this.statusChangedBy = statusChangedBy;
+        this.latestFechaEvaluacion = latestFechaEvaluacion;
+        this.latestResultStatus = latestResultStatus;
     }
 
     public String getId() {
@@ -195,7 +231,50 @@ public class EmployeeResponse {
         return active;
     }
 
+    public LocalDate getLatestFechaEvaluacion() {
+        return latestFechaEvaluacion;
+    }
+
+    public LocalDate getLatestEvaluationDate() {
+        return latestFechaEvaluacion;
+    }
+
+    public String getLatestResultStatus() {
+        return latestResultStatus;
+    }
+
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public boolean isCurrentlyActive() { return currentlyActive; }
+    public void setCurrentlyActive(boolean currentlyActive) { this.currentlyActive = currentlyActive; }
+    public LocalDateTime getActiveStartDate() { return activeStartDate; }
+    public void setActiveStartDate(LocalDateTime activeStartDate) { this.activeStartDate = activeStartDate; }
+    public LocalDateTime getActiveExpirationDate() { return activeExpirationDate; }
+    public void setActiveExpirationDate(LocalDateTime activeExpirationDate) { this.activeExpirationDate = activeExpirationDate; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
+    public LocalDateTime getStatusChangedAt() { return statusChangedAt; }
+    public void setStatusChangedAt(LocalDateTime statusChangedAt) { this.statusChangedAt = statusChangedAt; }
+    public String getStatusChangedBy() { return statusChangedBy; }
+    public void setStatusChangedBy(String statusChangedBy) { this.statusChangedBy = statusChangedBy; }
+
+    public void setLatestFechaEvaluacion(LocalDate latestFechaEvaluacion) {
+        this.latestFechaEvaluacion = latestFechaEvaluacion;
+    }
+
+    public void setLatestEvaluationDate(LocalDate latestEvaluationDate) {
+        this.latestFechaEvaluacion = latestEvaluationDate;
+    }
+
+    public void setLatestResultStatus(String latestResultStatus) {
+        this.latestResultStatus = latestResultStatus;
     }
 }

@@ -1,7 +1,10 @@
 package com.backend.dto.employee;
 
 import com.backend.model.AreaCode;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+
+import java.time.LocalDateTime;
 
 public class EmployeeRequest {
 
@@ -11,32 +14,31 @@ public class EmployeeRequest {
     @NotBlank
     private String documentNumber;
 
-    @NotBlank
     private String firstName;
 
     private String secondName;
 
-    @NotBlank
     private String firstLastName;
 
     private String secondLastName;
     private String gender;
     private String birthDate;
 
-    @NotBlank
     private String currentPosition;
 
-    @NotBlank
     private String workArea;
 
     private String employer;
     private String arl;
+
     private String email;
     private String zone;
 
     private AreaCode areaCode;
 
     private boolean active = true;
+    private LocalDateTime activeStartDate;
+    private LocalDateTime activeExpirationDate;
 
     public EmployeeRequest() {
     }
@@ -168,4 +170,9 @@ public class EmployeeRequest {
     public void setActive(boolean active) {
         this.active = active;
     }
+
+    public LocalDateTime getActiveStartDate() { return activeStartDate; }
+    public void setActiveStartDate(LocalDateTime activeStartDate) { this.activeStartDate = activeStartDate; }
+    public LocalDateTime getActiveExpirationDate() { return activeExpirationDate; }
+    public void setActiveExpirationDate(LocalDateTime activeExpirationDate) { this.activeExpirationDate = activeExpirationDate; }
 }

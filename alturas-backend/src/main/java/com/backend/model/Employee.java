@@ -1,7 +1,10 @@
 package com.backend.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.LocalDateTime;
 
 @Document(collection = "employees")
 public class Employee {
@@ -10,6 +13,7 @@ public class Employee {
     private String id;
 
     private String documentType;
+    @Indexed(name = "employees_document_number_idx")
     private String documentNumber;
 
     private String firstName;
@@ -28,11 +32,23 @@ public class Employee {
     private String zone;
 
     /**
-     * Área operativa principal del trabajador.
+     * Area operativa principal del trabajador.
      */
+    @Indexed(name = "employees_area_code_idx")
     private AreaCode areaCode;
 
     private boolean active = true;
+    private LocalDateTime activeStartDate;
+    private LocalDateTime activeExpirationDate;
+    private LocalDateTime createdAt;
+    private String createdBy;
+    private LocalDateTime updatedAt;
+    private String updatedBy;
+    private LocalDateTime statusChangedAt;
+    private String statusChangedBy;
+
+    private java.time.LocalDate latestFechaConcepto;
+    private String latestResultStatus;
 
     public Employee() {
     }
@@ -171,5 +187,61 @@ public class Employee {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public boolean isCurrentlyActive() {
+        LocalDateTime now = LocalDateTime.now();
+        boolean started = activeStartDate == null || !now.isBefore(activeStartDate);
+        boolean notExpired = activeExpirationDate == null || now.isBefore(activeExpirationDate);
+        return active && started && notExpired;
+    }
+
+    public LocalDateTime getActiveStartDate() { return activeStartDate; }
+    public void setActiveStartDate(LocalDateTime activeStartDate) { this.activeStartDate = activeStartDate; }
+    public LocalDateTime getActiveExpirationDate() { return activeExpirationDate; }
+    public void setActiveExpirationDate(LocalDateTime activeExpirationDate) { this.activeExpirationDate = activeExpirationDate; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
+    public LocalDateTime getStatusChangedAt() { return statusChangedAt; }
+    public void setStatusChangedAt(LocalDateTime statusChangedAt) { this.statusChangedAt = statusChangedAt; }
+    public String getStatusChangedBy() { return statusChangedBy; }
+    public void setStatusChangedBy(String statusChangedBy) { this.statusChangedBy = statusChangedBy; }
+
+    public java.time.LocalDate getLatestFechaConcepto() {
+        return latestFechaConcepto;
+    }
+
+    public java.time.LocalDate getLatestFechaEvaluacion() {
+        return latestFechaConcepto;
+    }
+
+    public java.time.LocalDate getLatestEvaluationDate() {
+        return latestFechaConcepto;
+    }
+
+    public void setLatestFechaConcepto(java.time.LocalDate latestFechaConcepto) {
+        this.latestFechaConcepto = latestFechaConcepto;
+    }
+
+    public void setLatestFechaEvaluacion(java.time.LocalDate latestFechaEvaluacion) {
+        this.latestFechaConcepto = latestFechaEvaluacion;
+    }
+
+    public void setLatestEvaluationDate(java.time.LocalDate latestEvaluationDate) {
+        this.latestFechaConcepto = latestEvaluationDate;
+    }
+
+    public String getLatestResultStatus() {
+        return latestResultStatus;
+    }
+
+    public void setLatestResultStatus(String latestResultStatus) {
+        this.latestResultStatus = latestResultStatus;
     }
 }

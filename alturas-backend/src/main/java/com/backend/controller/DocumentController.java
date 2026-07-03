@@ -2,6 +2,7 @@ package com.backend.controller;
 
 import com.backend.dto.document.DocumentReviewRequest;
 import com.backend.dto.document.BulkReviewRequest;
+import com.backend.model.HistoricalImportIssue;
 import com.backend.service.EmailSendService;
 import com.backend.model.ManagedDocument;
 import com.backend.service.DocumentAnalysisService;
@@ -27,6 +28,9 @@ import java.util.Map;
 @CrossOrigin
 public class DocumentController {
 
+    private static final int MAX_BATCH_FILES = 5;
+    private static final long MAX_BATCH_BYTES = 50L * 1024L * 1024L;
+
     private final DocumentService documentService;
     private final DocumentAnalysisService documentAnalysisService;
     private final DocumentBatchService documentBatchService;
@@ -40,8 +44,7 @@ public class DocumentController {
             DocumentBatchService documentBatchService,
             DocumentReportPdfService documentReportPdfService,
             DocumentEmailTemplateService documentEmailTemplateService,
-            EmailSendService emailSendService
-    ) {
+            EmailSendService emailSendService) {
         this.documentService = documentService;
         this.documentAnalysisService = documentAnalysisService;
         this.documentBatchService = documentBatchService;
@@ -51,8 +54,9 @@ public class DocumentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ManagedDocument>> getAll() {
-        return ResponseEntity.ok(documentService.getAllDocuments());
+    public ResponseEntity<List<ManagedDocument>> getAll(
+            @RequestParam(value = "historical", defaultValue = "true") boolean includeHistorical) {
+        return ResponseEntity.ok(documentService.getAllDocuments(includeHistorical));
     }
 
     @GetMapping("/{id}")
@@ -71,8 +75,7 @@ public class DocumentController {
             @RequestParam("documentType") String documentType,
             @RequestParam("examType") String examType,
             @RequestParam("file") MultipartFile file,
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         String uploadedBy = authentication != null ? authentication.getName() : "system";
 
         ManagedDocument saved = documentService.uploadDocument(
@@ -80,8 +83,7 @@ public class DocumentController {
                 documentType,
                 examType,
                 file,
-                uploadedBy
-        );
+                uploadedBy);
 
         return ResponseEntity.ok(saved);
     }
@@ -91,10 +93,23 @@ public class DocumentController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "documentType", defaultValue = "CONCEPTO_MEDICO") String documentType,
             @RequestParam(value = "examType", defaultValue = "TRABAJO_EN_ALTURAS") String examType,
-            Authentication authentication
-    ) {
+            @RequestParam(value = "historical", defaultValue = "false") boolean historical,
+            Authentication authentication) {
         if (files == null || files.isEmpty()) {
             throw new IllegalArgumentException("Debes adjuntar al menos un archivo PDF.");
+        }
+
+        if (!historical && files.size() > MAX_BATCH_FILES) {
+            throw new IllegalArgumentException("La carga normal analiza cada PDF. El limite seguro es "
+                    + MAX_BATCH_FILES
+                    + " PDFs por tanda. La app debe dividir la carpeta automaticamente; si ves este mensaje, vuelve a intentar con menos archivos.");
+        }
+
+        long totalBytes = files.stream().mapToLong(file -> file != null ? file.getSize() : 0L).sum();
+
+        if (!historical && totalBytes > MAX_BATCH_BYTES) {
+            throw new IllegalArgumentException(
+                    "La carga normal supera el tamano seguro por tanda. La app debe dividir la carpeta automaticamente; si ves este mensaje, intenta con menos PDFs o archivos mas livianos.");
         }
 
         String uploadedBy = authentication != null ? authentication.getName() : "system";
@@ -103,15 +118,53 @@ public class DocumentController {
                 files,
                 documentType,
                 examType,
-                uploadedBy
-        );
+                uploadedBy,
+                historical);
 
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/historical/issues")
+    public ResponseEntity<List<HistoricalImportIssue>> getHistoricalImportIssues(
+            @RequestParam(value = "batchId", required = false) String batchId) {
+        if (batchId != null && !batchId.isBlank()) {
+            return ResponseEntity.ok(documentBatchService.getHistoricalImportIssuesByBatch(batchId));
+        }
+
+        return ResponseEntity.ok(documentBatchService.getHistoricalImportIssues());
+    }
+
+    @GetMapping("/historical/issues/{id}/view")
+    public ResponseEntity<org.springframework.core.io.Resource> viewHistoricalImportIssue(@PathVariable String id) {
+        org.springframework.core.io.Resource resource = documentBatchService.getHistoricalImportIssueFile(id);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"pdf-no-asociado-" + id + ".pdf\"")
+                .body(resource);
+    }
+
+    @DeleteMapping("/historical/issues/all")
+    public ResponseEntity<Void> deleteAllHistoricalImportIssuesExplicit() {
+        documentBatchService.deleteAllHistoricalImportIssues();
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/historical/issues/{id}")
+    public ResponseEntity<Void> deleteHistoricalImportIssue(@PathVariable String id) {
+        documentBatchService.deleteHistoricalImportIssue(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/historical/issues")
+    public ResponseEntity<Void> deleteAllHistoricalImportIssues() {
+        documentBatchService.deleteAllHistoricalImportIssues();
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/analyze")
     public ResponseEntity<Map<String, Object>> analyze(@PathVariable String id) {
-        return ResponseEntity.ok(documentAnalysisService.analyzeDocument(id));
+        return ResponseEntity.ok(documentAnalysisService.analyze(id));
     }
 
     @GetMapping("/{id}/analysis")
@@ -119,22 +172,24 @@ public class DocumentController {
         return ResponseEntity.ok(documentAnalysisService.getSavedAnalysis(id));
     }
 
+    @PostMapping("/backfill-extracted-data")
+    public ResponseEntity<Map<String, Object>> backfillExtractedData() {
+        return ResponseEntity.ok(documentAnalysisService.backfillExtractedData());
+    }
+
     @PostMapping("/{id}/approve")
     public ResponseEntity<ManagedDocument> approveAndNotify(
             @PathVariable String id,
-            @Valid @RequestBody DocumentReviewRequest request
-    ) {
+            @Valid @RequestBody DocumentReviewRequest request) {
         return ResponseEntity.ok(documentService.approveAndNotify(id, request.getComment()));
     }
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<ManagedDocument> rejectReview(
             @PathVariable String id,
-            @Valid @RequestBody DocumentReviewRequest request
-    ) {
+            @Valid @RequestBody DocumentReviewRequest request) {
         return ResponseEntity.ok(documentService.rejectReview(id, request.getComment()));
     }
-
 
     @PostMapping("/approve-bulk")
     public ResponseEntity<Map<String, Object>> approveBulk(@RequestBody BulkReviewRequest request) {
@@ -149,6 +204,17 @@ public class DocumentController {
     @PostMapping("/{id}/resend-email")
     public ResponseEntity<?> resendEmail(@PathVariable String id) {
         return ResponseEntity.ok(emailSendService.resendAnalysisEmail(id));
+    }
+
+    @GetMapping("/{id}/view")
+    public ResponseEntity<org.springframework.core.io.Resource> viewDocument(@PathVariable String id) {
+        org.springframework.core.io.Resource resource = documentService.getDocumentFile(id);
+        ManagedDocument doc = documentService.getDocumentById(id);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + doc.getOriginalFileName() + "\"")
+                .body(resource);
     }
 
     @GetMapping("/{id}/report")

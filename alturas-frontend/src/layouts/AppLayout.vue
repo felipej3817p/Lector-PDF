@@ -7,26 +7,15 @@
     </template>
 
     <template v-else>
-      <header class="header-corporativo">
+      <div class="app-shell">
         <AppNavbar />
-      </header>
 
-      <main class="main-content">
-        <div class="container-xl py-4">
-          <slot />
-        </div>
-      </main>
-
-      <footer class="footer-corporativo">
-        <div class="container-xl footer-inner">
-          <div>
-            <strong>EBSA</strong>
-            <span class="footer-divider">•</span>
-            Panel de gestión documental de aptitud en alturas
+        <main class="main-content" :class="{ 'main-content--wide': isWidePage }">
+          <div class="app-content-container" :class="{ 'app-content-container--wide': isWidePage }">
+            <slot />
           </div>
-          <small>Vue 3 + Spring Boot + MongoDB</small>
-        </div>
-      </footer>
+        </main>
+      </div>
     </template>
   </div>
 </template>
@@ -38,4 +27,5 @@ import AppNavbar from '../components/AppNavbar.vue'
 
 const route = useRoute()
 const isAuthPage = computed(() => route.name === 'login')
+const isWidePage = computed(() => Boolean(route.meta.fullWidth))
 </script>

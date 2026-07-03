@@ -2,14 +2,19 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
-import UsersView from '../views/UsersView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import ResetPasswordView from '../views/ResetPasswordView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import UserAuditView from '../views/UserAuditView.vue'
+import ReportsView from '../views/ReportsView.vue'
 import ReviewPanelView from '../views/ReviewPanelView.vue'
 import EmployeeListView from '../views/EmployeeListView.vue'
 import EmployeeFormView from '../views/EmployeeFormView.vue'
+import EmployeeHistoryView from '../views/EmployeeHistoryView.vue'
 import DocumentsListView from '../views/DocumentsListView.vue'
 import DocumentUploadView from '../views/DocumentUploadView.vue'
 import DocumentDetailView from '../views/DocumentDetailView.vue'
+import HistoricalImportIssuesView from '../views/HistoricalImportIssuesView.vue'
 
 const getAuthSnapshot = () => {
   const token = localStorage.getItem('auth_token')
@@ -23,21 +28,40 @@ const getAuthSnapshot = () => {
     user = null
   }
 
-  const roles = Array.isArray(user?.roles) ? user.roles : []
+  const roles = (Array.isArray(user?.roles) ? user.roles : []).map((role) => {
+    const normalized = String(role || '').trim().toUpperCase().replace(/^ROLE_/, '')
+    return normalized === 'APPROVER' ? 'APROBADOR' : normalized
+  })
+
+  const isSuperAdmin = roles.includes('SUPER_ADMIN')
+  const isAdmin = isSuperAdmin || roles.includes('ADMIN')
+  const isApprover = roles.includes('APROBADOR')
+  const isOperator = roles.includes('OPERADOR')
+  const isViewer = roles.includes('VISUALIZADOR')
 
   return {
     token,
     user,
     roles,
-    isSuperAdmin: roles.includes('SUPER_ADMIN'),
-    isApprover: roles.includes('APROBADOR'),
-    isOperator: roles.includes('OPERADOR'),
-    canReviewDocuments: roles.includes('SUPER_ADMIN') || roles.includes('APROBADOR')
+    isSuperAdmin,
+    isAdmin,
+    isApprover,
+    isOperator,
+    isViewer,
+    canReviewDocuments: isAdmin || isApprover,
+    canManageSettings: Boolean(token),
+    canUploadDocuments: isAdmin || isOperator,
+    canWriteEmployees: isAdmin || isOperator,
+    isReadOnlyViewer: isViewer && !isAdmin && !isApprover && !isOperator
   }
 }
 
 const defaultRouteForRoles = (roles = []) => {
-  if (roles.includes('APROBADOR') && !roles.includes('SUPER_ADMIN')) {
+  const isSuperAdmin = roles.includes('SUPER_ADMIN')
+  const isAdmin = isSuperAdmin || roles.includes('ADMIN')
+  const isApprover = roles.includes('APROBADOR')
+
+  if (isApprover && !isAdmin) {
     return '/review'
   }
 
@@ -67,70 +91,157 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
-      meta: { guestOnly: true }
+      meta: { guestOnly: true, title: 'Ingresar' }
+    },
+
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView,
+      meta: { public: true, title: 'Recuperar contrasena' }
+    },
+
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
+      meta: { public: true, title: 'Restablecer contrasena' }
     },
 
     {
       path: '/review',
       name: 'review',
       component: ReviewPanelView,
-      meta: { requiresAuth: true, requiresReviewer: true }
+      meta: {
+        requiresAuth: true,
+        requiresReviewer: true,
+        title: 'Revision'
+      }
+    },
+
+    {
+      path: '/reports',
+      name: 'reports',
+      component: ReportsView,
+      meta: {
+        requiresAuth: true,
+        title: 'Reportes'
+      }
     },
 
     {
       path: '/documents',
       name: 'documents',
       component: DocumentsListView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: {
+        requiresAuth: true,
+        blocksApproverOnly: true,
+        blocksViewerOnly: true,
+        title: 'Documentos'
+      }
     },
 
     {
       path: '/documents/upload',
       name: 'document-upload',
       component: DocumentUploadView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: {
+        requiresAuth: true,
+        requiresDocumentUpload: true,
+        title: 'Cargar PDFs'
+      }
+    },
+
+    {
+      path: '/documents/historical/issues',
+      name: 'historical-import-issues',
+      component: HistoricalImportIssuesView,
+      meta: {
+        requiresAuth: true,
+        requiresDocumentUpload: true,
+        title: 'PDFs no asociados'
+      }
     },
 
     {
       path: '/documents/:id',
       name: 'document-detail',
       component: DocumentDetailView,
-      meta: { requiresAuth: true }
+      meta: {
+        requiresAuth: true,
+        blocksViewerOnly: true,
+        title: 'Detalle documental'
+      }
     },
 
     {
       path: '/employees',
       name: 'employees',
       component: EmployeeListView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: {
+        requiresAuth: true,
+        title: 'Trabajadores'
+      }
     },
 
     {
       path: '/employees/new',
       name: 'employee-create',
       component: EmployeeFormView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: {
+        requiresAuth: true,
+        requiresEmployeeWrite: true,
+        title: 'Nuevo trabajador'
+      }
     },
 
     {
       path: '/employees/:id/edit',
       name: 'employee-edit',
       component: EmployeeFormView,
-      meta: { requiresAuth: true, requiresSuperAdmin: true }
+      meta: {
+        requiresAuth: true,
+        requiresEmployeeWrite: true,
+        title: 'Editar trabajador'
+      }
+    },
+
+    {
+      path: '/employees/:id/history',
+      name: 'employee-history',
+      component: EmployeeHistoryView,
+      meta: {
+        requiresAuth: true,
+        title: 'Historial'
+      }
     },
 
     {
       path: '/settings',
       name: 'settings',
       component: SettingsView,
-      meta: { requiresAuth: true, blocksApproverOnly: true }
+      meta: {
+        requiresAuth: true,
+        requiresSettingsAdmin: true,
+        title: 'Configuracion'
+      }
+    },
+
+    {
+      path: '/settings/users/audit',
+      name: 'user-audit',
+      component: UserAuditView,
+      meta: {
+        requiresAuth: true,
+        requiresAdmin: true,
+        fullWidth: true,
+        title: 'Auditoria de usuarios'
+      }
     },
 
     {
       path: '/users',
-      name: 'users',
-      component: UsersView,
-      meta: { requiresAuth: true, requiresSuperAdmin: true }
+      redirect: '/settings'
     }
   ]
 })
@@ -139,12 +250,19 @@ router.beforeEach((to, from, next) => {
   const {
     token,
     roles,
-    isSuperAdmin,
+    isAdmin,
     isApprover,
-    canReviewDocuments
+    canReviewDocuments,
+    canUploadDocuments,
+    canWriteEmployees,
+    isReadOnlyViewer
   } = getAuthSnapshot()
 
-  const isApproverOnly = isApprover && !isSuperAdmin
+  const isApproverOnly = isApprover && !isAdmin
+
+  if (to.meta.public) {
+    return next()
+  }
 
   if (to.meta.requiresAuth && !token) {
     return next('/login')
@@ -154,19 +272,41 @@ router.beforeEach((to, from, next) => {
     return next(defaultRouteForRoles(roles))
   }
 
-  if (to.meta.requiresSuperAdmin && !isSuperAdmin) {
+  if (to.meta.requiresSettingsAdmin && !token) {
     return next(defaultRouteForRoles(roles))
+  }
+
+  if (to.meta.requiresAdmin && !isAdmin) {
+    return next('/employees')
   }
 
   if (to.meta.requiresReviewer && !canReviewDocuments) {
     return next('/employees')
   }
 
+  if (to.meta.requiresDocumentUpload && !canUploadDocuments) {
+    return next('/employees')
+  }
+
+  if (to.meta.requiresEmployeeWrite && !canWriteEmployees) {
+    return next('/employees')
+  }
+
   if (to.meta.blocksApproverOnly && isApproverOnly) {
-    return next('/review')
+    return next('/employees')
+  }
+
+  if (to.meta.blocksViewerOnly && isReadOnlyViewer) {
+    return next('/employees')
   }
 
   return next()
 })
 
+router.afterEach((to) => {
+  const title = to.meta?.title ? `${to.meta.title} | SSTAlturas` : 'SSTAlturas'
+  document.title = title
+})
+
 export default router
+
