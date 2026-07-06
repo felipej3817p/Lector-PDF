@@ -279,7 +279,7 @@
                           </RouterLink>
 
                           <button
-                            v-if="auth.isAdmin || auth.isSuperAdmin"
+                            v-if="auth.isAdmin || auth.isSuperAdmin || auth.isOperator"
                             type="button"
                             class="danger-menu-item"
                             @click="deleteEvaluationDocument(item)"
@@ -827,19 +827,19 @@ const normalizeResultStatus = (value) => {
   if (status === 'APTO') return 'APTO'
   if (status === 'NO_APTO' || status === 'NO APTO') return 'NO_APTO'
 
-  return 'PENDIENTE'
+  return 'NO_APTO'
 }
 
 const resultLabel = (status) => {
   if (status === 'APTO') return 'APTO'
   if (status === 'NO_APTO') return 'NO APTO'
-  return 'PENDIENTE'
+  return 'NO APTO'
 }
 
 const reviewLabel = (status) => {
   if (status === 'NOT_PENDING') return 'NO ENVIADO'
   if (status === 'APPROVED') return 'APROBADO'
-  if (status === 'REJECTED') return 'RECHAZADO'
+  if (status === 'REJECTED') return 'REVISIÓN'
   if (status === 'PENDING_REVIEW') return 'PENDIENTE'
   return status || 'PENDIENTE'
 }
@@ -949,7 +949,7 @@ const analyzeHistoricalResult = async (item) => {
 }
 
 const deleteEvaluationDocument = async (item) => {
-  if (!(auth.isAdmin || auth.isSuperAdmin) || !item?.id) return
+  if (!(auth.isAdmin || auth.isSuperAdmin || auth.isOperator) || !item?.id) return
 
   const confirmed = window.confirm(`Seguro que deseas eliminar el PDF ${item.originalFileName || ''}? Esta accion borra el soporte y su analisis.`)
   if (!confirmed) return

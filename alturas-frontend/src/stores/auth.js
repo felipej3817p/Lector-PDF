@@ -89,7 +89,7 @@ export const useAuthStore = defineStore('auth', {
 
     canDeleteDocuments: (state) => {
       const roles = getRoles(state.user)
-      return roles.includes('SUPER_ADMIN') || roles.includes('ADMIN')
+      return roles.includes('SUPER_ADMIN') || roles.includes('ADMIN') || roles.includes('OPERADOR')
     },
 
     isReadOnlyViewer: (state) => {

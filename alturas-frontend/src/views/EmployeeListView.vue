@@ -100,7 +100,7 @@
             </select>
           </div>
 
-          <div v-if="!isViewerOnly" class="form-field">
+          <div class="form-field">
             <label class="label" for="resultFilter">Resultado</label>
             <select
               id="resultFilter"
@@ -151,11 +151,23 @@
               :disabled="loading"
             >
               <option value="">Todas</option>
-              <option value="NOT_PENDING">NO ENVIADO</option>
               <option value="SENT">ENVIADO</option>
               <option value="FAILED">FALLO</option>
-              <option value="SKIPPED">OMITIDO</option>
               <option value="SIN_NOTIFICACION">SIN NOTIFICACION</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label class="label" for="statusFilter">Estado</label>
+            <select
+              id="statusFilter"
+              v-model="statusFilter"
+              class="form-select"
+              :disabled="loading"
+            >
+              <option value="">Todos</option>
+              <option value="active">Habilitados</option>
+              <option value="inactive">Inhabilitados</option>
             </select>
           </div>
 
@@ -227,7 +239,7 @@
                   <col class="col-document" />
                   <col class="col-worker" />
                   <col class="col-zone" />
-                  <col v-if="!isViewerOnly" class="col-result" />
+                  <col class="col-result" />
                   <col v-if="canViewWorkflowDetails" class="col-review" />
                   <col v-if="canViewWorkflowDetails" class="col-notification" />
                   <col v-if="!isViewerOnly" class="col-date" />
@@ -239,7 +251,7 @@
                     <th>Cedula</th>
                     <th>Trabajador</th>
                     <th>Zona</th>
-                    <th v-if="!isViewerOnly">Resultado</th>
+                    <th>Resultado</th>
                     <th v-if="canViewWorkflowDetails">Revision</th>
                     <th v-if="canViewWorkflowDetails">Notificacion</th>
                     <th v-if="!isViewerOnly">Fecha evaluacion</th>
@@ -275,7 +287,7 @@
                       </div>
                     </td>
 
-                    <td v-if="!isViewerOnly">
+                    <td>
                       <span :class="resultClass(row.resultStatus)">
                         {{ resultLabel(row.resultStatus) }}
                       </span>
@@ -296,8 +308,14 @@
                     <td v-if="!isViewerOnly">
                       <div class="evaluation-date-cell">
                         <strong>{{ formatDate(row.fechaConcepto || row.uploadedAt) }}</strong>
-                        <small v-if="row.evaluationExpired" class="expired-evaluation-note">
+                        <small v-if="row.evaluationExpired" class="expired-evaluation-note custom-expired-text">
                           Vigencia vencida
+                        </small>
+                        <small v-else-if="row.daysRemaining !== null && row.daysRemaining <= 30" class="warning-evaluation-note custom-warning-text">
+                          ¡Por vencer en {{ row.daysRemaining }} días!
+                        </small>
+                        <small v-else-if="row.expiresAt" class="valid-evaluation-note custom-valid-text">
+                          Vence el: {{ formatDate(row.expiresAt) }}
                         </small>
                       </div>
                     </td>
@@ -786,6 +804,17 @@
               />
             </div>
 
+            <div class="form-field checkbox-field">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  v-model="employeeForm.active"
+                  :disabled="employeeFormSaving"
+                />
+                Habilitar
+              </label>
+            </div>
+
           </div>
 
           <footer class="employee-modal__footer">
@@ -889,7 +918,7 @@ const employeeTableColspan = computed(() => {
 const employees = ref([])
 const documents = ref([])
 const analysisByDocumentId = ref({})
-const EVALUATION_VALIDITY_DAYS = 90
+const EVALUATION_VALIDITY_DAYS = 365
 const DAY_IN_MS = 24 * 60 * 60 * 1000
 
 const loading = ref(false)
@@ -901,6 +930,7 @@ const subzoneFilter = ref('')
 const resultFilter = ref('')
 const reviewFilter = ref('')
 const notificationFilter = ref('')
+const statusFilter = ref('active')
 const fromDate = ref('')
 const toDate = ref('')
 
@@ -1003,16 +1033,26 @@ const parseDate = (value) => {
   return Number.isNaN(time) ? 0 : time
 }
 
-const isEvaluationExpired = (value) => {
+const getDaysRemaining = (value) => {
   const evaluationTime = parseDate(value)
-
-  if (!evaluationTime) return false
+  if (!evaluationTime) return null
 
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   const expiresAt = evaluationTime + EVALUATION_VALIDITY_DAYS * DAY_IN_MS
 
-  return today > expiresAt
+  return Math.ceil((expiresAt - today) / DAY_IN_MS)
+}
+
+const getExpirationTime = (value) => {
+  const evaluationTime = parseDate(value)
+  if (!evaluationTime) return null
+  return evaluationTime + EVALUATION_VALIDITY_DAYS * DAY_IN_MS
+}
+
+const isEvaluationExpired = (value) => {
+  const days = getDaysRemaining(value)
+  return days !== null && days < 0
 }
 
 const documentEvaluationDate = (document) => {
@@ -1127,6 +1167,8 @@ const rows = computed(() => {
       const analysis = latestDocument ? analysisByDocumentId.value[latestDocument.id] : null
       const fechaConcepto = documentEvaluationDate(latestDocument)
       const evaluationExpired = isEvaluationExpired(fechaConcepto)
+      const daysRemaining = getDaysRemaining(fechaConcepto)
+      const expiresAt = getExpirationTime(fechaConcepto)
 
       const rawResult = String(latestDocument?.resultStatus || analysis?.resultStatus || '').toUpperCase().trim()
 
@@ -1157,6 +1199,8 @@ const rows = computed(() => {
         uploadedAt: latestDocument?.uploadedAt || '',
         fechaConcepto,
         evaluationExpired,
+        daysRemaining,
+        expiresAt,
         resultStatus,
         reviewStatus,
         notificationStatus
@@ -1170,6 +1214,10 @@ const filteredRows = computed(() => {
 
   return rows.value.filter((row) => {
     const employee = row.employee
+
+    if (statusFilter.value === 'active' && employee.active === false) return false
+    if (statusFilter.value === 'inactive' && employee.active !== false) return false
+
     const employeeAreaCode = normalizeAreaCode(employee.areaCode)
     const employeePrimaryArea = primaryAreaCode(employeeAreaCode)
 
@@ -1182,7 +1230,6 @@ const filteredRows = computed(() => {
       employeeSubzoneCode(employee) === subzoneFilter.value
 
     const matchesResult =
-      isViewerOnly.value ||
       !resultFilter.value ||
       row.resultStatus === resultFilter.value
 
@@ -1302,6 +1349,7 @@ const resetFilters = () => {
   resultFilter.value = ''
   reviewFilter.value = ''
   notificationFilter.value = ''
+  statusFilter.value = 'active'
   fromDate.value = ''
   toDate.value = ''
   currentPage.value = 1
@@ -1537,14 +1585,14 @@ const closeActionMenusOnOutsideClick = (event) => {
 const resultLabel = (status) => {
   if (status === 'APTO') return 'APTO'
   if (status === 'NO_APTO') return 'NO APTO'
-  if (status === 'PENDIENTE') return 'PENDIENTE'
+  if (status === 'PENDIENTE') return 'NO APTO'
   return 'SIN EVALUACION'
 }
 
 const reviewLabel = (status) => {
   if (status === 'PENDING_REVIEW') return 'PENDIENTE'
   if (status === 'APPROVED') return 'APROBADO'
-  if (status === 'REJECTED') return 'RECHAZADO'
+  if (status === 'REJECTED') return 'REVISIÓN'
   return 'SIN REVISION'
 }
 
@@ -1607,7 +1655,7 @@ const loadData = async () => {
 }
 
 watch(
-  [search, areaFilter, subzoneFilter, resultFilter, reviewFilter, notificationFilter, fromDate, toDate, pageSize],
+  [search, areaFilter, subzoneFilter, resultFilter, reviewFilter, notificationFilter, statusFilter, fromDate, toDate, pageSize],
   () => {
     currentPage.value = 1
     closeAllActionMenus()
@@ -1949,6 +1997,20 @@ onBeforeUnmount(() => {
   border-radius: 11px;
   background: var(--surface);
   box-shadow: var(--shadow-lg);
+}
+
+.custom-expired-text {
+  color: #ef4444 !important;
+  font-weight: bold;
+}
+
+.custom-warning-text {
+  color: #f59e0b !important;
+  font-weight: bold;
+}
+
+.custom-valid-text {
+  color: #10b981 !important;
 }
 
 .row-actions-menu__content a,

@@ -158,7 +158,7 @@
                 :disabled="bulkLoading || !selectedIds.length"
                 @click="openReviewActionModal('reject')"
               >
-                Rechazar
+                Revisión
               </button>
             </div>
           </div>
@@ -417,8 +417,6 @@
               <option value="">Todos</option>
               <option value="SENT">Enviado</option>
               <option value="FAILED">Falló</option>
-              <option value="SKIPPED">Omitido</option>
-              <option value="NOT_PENDING">No enviado</option>
             </select>
           </div>
 
@@ -748,7 +746,7 @@
 
           <button
             type="button"
-            :class="reviewActionType === 'approve' ? 'primary-btn' : 'secondary-btn danger-btn'"
+            :class="reviewActionType === 'approve' ? 'primary-btn' : 'secondary-btn'"
             :disabled="bulkLoading || !reviewActionIds.length"
             @click="confirmReviewAction"
           >
@@ -1093,7 +1091,7 @@ const allVisibleSelected = computed(() => {
 const reviewActionTitle = computed(() => {
   return reviewActionType.value === 'approve'
     ? 'Aprobar evaluación'
-    : 'Rechazar evaluación'
+    : 'Solicitar revisión'
 })
 
 const reviewActionDescription = computed(() => {
@@ -1103,13 +1101,13 @@ const reviewActionDescription = computed(() => {
     return `Se aprobará${count === 1 ? '' : 'n'} ${count} documento${count === 1 ? '' : 's'} y se intentará enviar correo al trabajador.`
   }
 
-  return `Se rechazará${count === 1 ? '' : 'n'} ${count} documento${count === 1 ? '' : 's'} y se intentará enviar correo al trabajador.`
+  return `Se solicitará revisión para ${count} documento${count === 1 ? '' : 's'} y se notificará al encargado.`
 })
 
 const reviewActionConfirmText = computed(() => {
   return reviewActionType.value === 'approve'
     ? 'Aprobar y enviar'
-    : 'Rechazar y enviar'
+    : 'Solicitar revisión y enviar'
 })
 
 const showToast = (title, message, type = 'success') => {
@@ -1139,7 +1137,7 @@ const showBulkNotificationToast = (actionType, actionIds) => {
     return !row.notificationStatus || row.notificationStatus === 'NOT_PENDING'
   }).length
 
-  const actionText = actionType === 'approve' ? 'aprobaron' : 'rechazaron'
+  const actionText = actionType === 'approve' ? 'aprobaron' : 'enviaron a revisión'
   const documentText = actionIds.length === 1 ? 'documento' : 'documentos'
   const total = actionIds.length
 
@@ -1338,7 +1336,7 @@ const resultClass = (status) => {
 const reviewLabel = (status) => {
   if (status === 'PENDING_REVIEW') return 'PENDIENTE'
   if (status === 'APPROVED') return 'APROBADO'
-  if (status === 'REJECTED') return 'RECHAZADO'
+  if (status === 'REJECTED') return 'REVISIÓN'
   return status || '-'
 }
 

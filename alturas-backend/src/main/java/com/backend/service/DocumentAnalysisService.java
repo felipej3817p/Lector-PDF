@@ -341,43 +341,51 @@ public class DocumentAnalysisService {
 
     private String resolveResultStatus(String normalizedText) {
         if (normalizedText == null || normalizedText.isBlank()) {
-            return "PENDIENTE";
+            return "NO_APTO";
         }
 
         /*
-         * Primero validar NO_APTO.
-         * Importante: "NO APTO" contiene la palabra "APTO".
-         * Por eso NO_APTO debe evaluarse antes que APTO.
+         * Primero validar los casos negativos (NO_APTO).
          */
-        if (normalizedText.contains("NO CUMPLE CON LOS REQUISITOS DE SALUD PARA TRABAJO EN ALTURAS")) {
+        if (normalizedText.contains("NO CUMPLE")) {
             return "NO_APTO";
         }
-
-        if (normalizedText.contains("NO CUMPLE CON LAS CONDICIONES DE SALUD PARA TRABAJO EN ALTURAS")) {
+        if (normalizedText.contains("NO ES APTO")) {
             return "NO_APTO";
         }
-
+        if (normalizedText.contains("NO ADMITIDO")) {
+            return "NO_APTO";
+        }
         if (normalizedText.contains("NO APTO")) {
             return "NO_APTO";
         }
-
         if (normalizedText.contains("NO_APTO")) {
             return "NO_APTO";
         }
-
-        if (normalizedText.contains("CUMPLE CON LAS CONDICIONES DE SALUD PARA TRABAJO EN ALTURAS")) {
-            return "APTO";
+        if (normalizedText.contains("PENDIENTE")) {
+            return "NO_APTO";
         }
 
-        if (normalizedText.contains("CUMPLE CON LOS REQUISITOS DE SALUD PARA TRABAJO EN ALTURAS")) {
+        /*
+         * Validar los casos positivos (APTO).
+         */
+        if (normalizedText.contains("SI CUMPLE")) {
             return "APTO";
         }
-
+        if (normalizedText.contains("CUMPLE")) {
+            return "APTO";
+        }
+        if (normalizedText.contains("SI PUEDE")) {
+            return "APTO";
+        }
         if (normalizedText.contains("APTO")) {
             return "APTO";
         }
 
-        return "PENDIENTE";
+        /*
+         * Si no se encuentra un resultado concluyente, se marca como NO_APTO.
+         */
+        return "NO_APTO";
     }
 
     private Map<String, Object> buildResponse(ManagedDocument document, DocumentAnalysis analysis) {

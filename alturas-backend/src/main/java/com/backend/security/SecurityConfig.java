@@ -92,7 +92,7 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "SUPER_ADMIN", "OPERADOR")
 
                         .requestMatchers(HttpMethod.DELETE, "/api/documents/**")
-                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN", "OPERADOR")
 
                         /*
                          * Revisión, aprobación y reenvío:

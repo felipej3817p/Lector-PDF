@@ -258,10 +258,10 @@ public class ConsolidatedExportService {
         if ("APTO".equals(normalized)) {
             return "APTO";
         }
-        if ("NO_APTO".equals(normalized)) {
+        if ("NO_APTO".equals(normalized) || "NO APTO".equals(normalized)) {
             return "NO_APTO";
         }
-        return "PENDIENTE";
+        return "NO_APTO";
     }
 
     private String normalizeProcessingStatus(String processingStatus) {

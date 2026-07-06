@@ -140,30 +140,14 @@ public class ReportService {
                     "Cargo",
                     "Zona/ área",
                     "Resultado concepto de aptitud para trabajo en alturas",
-                    "Fecha de evaluacion"
+                    "Fecha de carga"
             };
 
             for (int i = 0; i < headers.length; i++) {
                 createTextCell(headerRow, i, headers[i], headerStyle);
             }
 
-            Row noteRow = sheet.createRow(4);
-            noteRow.setHeightInPoints(62);
-
-            String[] notes = {
-                    "corresponde al nombre del trabajador registrado en nómina",
-                    "corresponde al número de documento del trabajador",
-                    "corresponde al cargo que tiene el trabajador",
-                    "corresponde a la zona o área donde labora el trabajador",
-                    "debe quedar el resultado si es apto, no apto o no apto temporalmente para trabajo en alturas",
-                    "fecha de evaluacion extraida del PDF del trabajador"
-            };
-
-            for (int i = 0; i < notes.length; i++) {
-                createTextCell(noteRow, i, notes[i], noteStyle);
-            }
-
-            int rowIndex = 5;
+            int rowIndex = 4;
 
             for (AptitudeReportRow reportRow : rows) {
                 Row row = sheet.createRow(rowIndex++);
@@ -201,7 +185,7 @@ public class ReportService {
 
             }
 
-            sheet.createFreezePane(0, 5);
+            sheet.createFreezePane(0, 4);
 
             sheet.setColumnWidth(0, 34 * 256);
             sheet.setColumnWidth(1, 22 * 256);
@@ -302,12 +286,17 @@ public class ReportService {
 
         DocumentAnalysis analysis = analysisOptional.get();
         String documentResultStatus = normalizeResultStatus(analysis.getResultStatus());
+        LocalDate conceptDate = resolveConceptDate(document, analysis);
+
+        if (isExpired(conceptDate)) {
+            documentResultStatus = "VIGENCIA_VENCIDA";
+        }
 
         if (!safe(resultStatusFilter).isBlank()) {
             if (!documentResultStatus.equals(resultStatusFilter)) {
                 return null;
             }
-        } else if (!"APTO".equals(documentResultStatus) && !"NO_APTO".equals(documentResultStatus)) {
+        } else if (!"APTO".equals(documentResultStatus) && !"NO_APTO".equals(documentResultStatus) && !"VIGENCIA_VENCIDA".equals(documentResultStatus)) {
             return null;
         }
 
@@ -349,27 +338,32 @@ public class ReportService {
                 }
 
                 DocumentAnalysis analysis = analysisOptional.get();
-                String resultStatus = normalizeResultStatus(analysis.getResultStatus());
+        String resultStatus = normalizeResultStatus(analysis.getResultStatus());
+        LocalDate conceptDate = resolveConceptDate(document, analysis);
 
-                if (!resultStatusFilter.isBlank()) {
-                    if (!resultStatus.equals(resultStatusFilter)) {
-                        continue;
-                    }
-                } else if (!"APTO".equals(resultStatus) && !"NO_APTO".equals(resultStatus)) {
+        if (isExpired(conceptDate)) {
+            resultStatus = "VIGENCIA_VENCIDA";
+        }
+
+        if (!resultStatusFilter.isBlank()) {
+            if (!resultStatus.equals(resultStatusFilter)) {
+                continue;
+            }
+        } else if (!"APTO".equals(resultStatus) && !"NO_APTO".equals(resultStatus) && !"VIGENCIA_VENCIDA".equals(resultStatus)) {
+            continue;
+        }
+
+                LocalDate uploadedDate = document.getUploadedAt() != null ? document.getUploadedAt().toLocalDate() : null;
+
+                if ((from != null || to != null) && uploadedDate == null) {
                     continue;
                 }
 
-                LocalDate conceptDate = resolveConceptDate(document, analysis);
-
-                if ((from != null || to != null) && conceptDate == null) {
+                if (from != null && uploadedDate.isBefore(from)) {
                     continue;
                 }
 
-                if (from != null && conceptDate.isBefore(from)) {
-                    continue;
-                }
-
-                if (to != null && conceptDate.isAfter(to)) {
+                if (to != null && uploadedDate.isAfter(to)) {
                     continue;
                 }
 
@@ -379,7 +373,7 @@ public class ReportService {
                         safe(employee.getCurrentPosition()),
                         resolveAreaLabel(employee),
                         resultLabel(resultStatus),
-                        conceptDate));
+                        uploadedDate != null ? uploadedDate : conceptDate));
             }
 
             employeeRows.sort(
@@ -590,22 +584,31 @@ public class ReportService {
         if ("NO_APTO".equals(normalized) || "NO_APTO_TEMPORAL".equals(normalized)) {
             return "NO_APTO";
         }
+        if ("VIGENCIA_VENCIDA".equals(normalized)) {
+            return "VIGENCIA_VENCIDA";
+        }
 
-        if ("APTO".equals(normalized)) {
+        if ("APTO".equals(value)) {
             return "APTO";
         }
-
-        if ("PENDIENTE".equals(normalized) || "PENDING".equals(normalized)) {
-            return "PENDIENTE";
+        if ("NO_APTO".equals(value) || "NO APTO".equals(value)) {
+            return "NO_APTO";
         }
+        return "NO_APTO";
+    }
 
-        return normalized;
+    private boolean isExpired(LocalDate conceptDate) {
+        if (conceptDate == null) {
+            return false;
+        }
+        return LocalDate.now().isAfter(conceptDate.plusDays(365));
     }
 
     private String resultLabel(String resultStatus) {
         return switch (normalizeResultStatus(resultStatus)) {
             case "APTO" -> "Apto para trabajo en alturas";
             case "NO_APTO" -> "No apto temporalmente para trabajo en alturas";
+            case "VIGENCIA_VENCIDA" -> "Vigencia vencida (requiere nueva evaluación)";
             default -> "Pendiente de validación";
         };
     }

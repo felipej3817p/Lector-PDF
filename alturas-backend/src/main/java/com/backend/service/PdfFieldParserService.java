@@ -81,7 +81,7 @@ public class PdfFieldParserService {
         String laborConcept = firstNonBlank(
                 extractNormalized(normalized, "CONCEPTO LABORAL\\s*(.*?)\\s*Observaciones:", 1),
                 extractNormalized(normalized, "Concepto para trabajo en alturas:\\s*(.*?)\\s*Resultado:", 1),
-                extractNormalized(normalized, "Resultado:\\s*(APTO|NO\\s*APTO|NO_APTO)", 1));
+                extractNormalized(normalized, "Resultado:\\s*(APTO|NO\\s*APTO|NO_APTO|CUMPLE|NO\\s*CUMPLE|SI\\s*CUMPLE|SI\\s*PUEDE|NO\\s*ADMITIDO|NO\\s*ES\\s*APTO)", 1));
 
         String observations = extractNormalized(
                 normalized,

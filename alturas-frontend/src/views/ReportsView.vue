@@ -91,7 +91,7 @@
             </div>
 
             <div class="form-field">
-              <label class="label" for="excelFrom">Evaluación desde</label>
+              <label class="label" for="excelFrom">Fecha de carga desde</label>
               <input
                 id="excelFrom"
                 v-model="excelFilters.from"
@@ -101,7 +101,7 @@
             </div>
 
             <div class="form-field">
-              <label class="label" for="excelTo">Evaluación hasta</label>
+              <label class="label" for="excelTo">Fecha de carga hasta</label>
               <input
                 id="excelTo"
                 v-model="excelFilters.to"
