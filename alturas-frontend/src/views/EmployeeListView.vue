@@ -945,18 +945,32 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000
 const loading = ref(false)
 const error = ref('')
 
-const search = ref('')
-const areaFilter = ref('')
-const subzoneFilter = ref('')
-const resultFilter = ref('')
-const reviewFilter = ref('')
-const notificationFilter = ref('')
-const statusFilter = ref('active')
-const fromDate = ref('')
-const toDate = ref('')
+const search = ref(sessionStorage.getItem('emp_search') || '')
+const areaFilter = ref(sessionStorage.getItem('emp_area') || '')
+const subzoneFilter = ref(sessionStorage.getItem('emp_subzone') || '')
+const resultFilter = ref(sessionStorage.getItem('emp_result') || '')
+const reviewFilter = ref(sessionStorage.getItem('emp_review') || '')
+const notificationFilter = ref(sessionStorage.getItem('emp_notif') || '')
+const statusFilter = ref(sessionStorage.getItem('emp_status') || 'active')
+const fromDate = ref(sessionStorage.getItem('emp_from') || '')
+const toDate = ref(sessionStorage.getItem('emp_to') || '')
 
-const pageSize = ref(15)
-const currentPage = ref(1)
+const pageSize = ref(Number(sessionStorage.getItem('emp_size')) || 15)
+const currentPage = ref(Number(sessionStorage.getItem('emp_page')) || 1)
+
+const isInitializing = ref(true)
+
+watch(currentPage, (val) => sessionStorage.setItem('emp_page', val))
+watch(pageSize, (val) => sessionStorage.setItem('emp_size', val))
+watch(search, (val) => sessionStorage.setItem('emp_search', val))
+watch(areaFilter, (val) => sessionStorage.setItem('emp_area', val))
+watch(subzoneFilter, (val) => sessionStorage.setItem('emp_subzone', val))
+watch(resultFilter, (val) => sessionStorage.setItem('emp_result', val))
+watch(reviewFilter, (val) => sessionStorage.setItem('emp_review', val))
+watch(notificationFilter, (val) => sessionStorage.setItem('emp_notif', val))
+watch(statusFilter, (val) => sessionStorage.setItem('emp_status', val))
+watch(fromDate, (val) => sessionStorage.setItem('emp_from', val))
+watch(toDate, (val) => sessionStorage.setItem('emp_to', val))
 const selectedRow = ref(null)
 
 const employeeFormOpen = ref(false)
@@ -1669,7 +1683,6 @@ const loadData = async () => {
       : []
 
     analysisByDocumentId.value = {}
-    currentPage.value = 1
   } catch (err) {
     error.value = err?.response?.data?.message || 'No se pudo cargar el seguimiento de trabajadores.'
     console.error('Error cargando trabajadores:', err)
@@ -1680,7 +1693,8 @@ const loadData = async () => {
 
 watch(
   [search, areaFilter, subzoneFilter, resultFilter, reviewFilter, notificationFilter, statusFilter, fromDate, toDate, pageSize],
-  () => {
+  (newVals, oldVals) => {
+    if (isInitializing.value) return;
     currentPage.value = 1
     closeAllActionMenus()
   }
@@ -1691,7 +1705,7 @@ watch(areaFilter, () => {
 })
 
 watch(totalPages, (value) => {
-  if (currentPage.value > value) {
+  if (value > 0 && !loading.value && currentPage.value > value) {
     currentPage.value = value
   }
 })
@@ -1699,6 +1713,9 @@ watch(totalPages, (value) => {
 onMounted(() => {
   loadData()
   window.addEventListener('click', closeActionMenusOnOutsideClick)
+  setTimeout(() => {
+    isInitializing.value = false
+  }, 100)
 })
 
 onBeforeUnmount(() => {
