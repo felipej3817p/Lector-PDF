@@ -1,7 +1,6 @@
 package com.backend.dto.employee;
 
 import com.backend.model.AreaCode;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDateTime;
@@ -33,6 +32,7 @@ public class EmployeeRequest {
 
     private String email;
     private String zone;
+    private String educationalLevel;
 
     private AreaCode areaCode;
 
@@ -153,6 +153,14 @@ public class EmployeeRequest {
 
     public void setZone(String zone) {
         this.zone = zone;
+    }
+
+    public String getEducationalLevel() {
+        return educationalLevel;
+    }
+
+    public void setEducationalLevel(String educationalLevel) {
+        this.educationalLevel = educationalLevel;
     }
 
     public AreaCode getAreaCode() {

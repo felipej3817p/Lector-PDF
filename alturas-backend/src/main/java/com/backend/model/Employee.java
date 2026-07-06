@@ -30,6 +30,7 @@ public class Employee {
     private String arl;
     private String email;
     private String zone;
+    private String educationalLevel;
 
     /**
      * Area operativa principal del trabajador.
@@ -171,6 +172,14 @@ public class Employee {
 
     public void setZone(String zone) {
         this.zone = zone;
+    }
+
+    public String getEducationalLevel() {
+        return educationalLevel;
+    }
+
+    public void setEducationalLevel(String educationalLevel) {
+        this.educationalLevel = educationalLevel;
     }
 
     public AreaCode getAreaCode() {

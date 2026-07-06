@@ -72,6 +72,11 @@
             </div>
 
             <div class="summary-item">
+              <span>Nivel Educativo</span>
+              <strong>{{ employeeEducationalLevel || '-' }}</strong>
+            </div>
+
+            <div class="summary-item">
               <span>Ultima evaluacion</span>
               <strong>{{ latestEvaluationDate ? formatDateLocal(latestEvaluationDate) : '-' }}</strong>
             </div>
@@ -571,9 +576,10 @@ const employeeDocumentLabel = computed(() => {
 
 const employeeEmail = computed(() => employee.value?.email || '')
 const employeePosition = computed(() => employee.value?.currentPosition || '')
-const employeeZone = computed(() => employee.value?.zone || employee.value?.workArea || '')
 const employeeAreaCode = computed(() => employee.value?.areaCode || '')
-const employeeActive = computed(() => employee.value?.active !== false)
+const employeeEducationalLevel = computed(() => employee.value?.educationalLevel || '')
+const employeeActive = computed(() => employee.value?.active ?? true)
+const employeeCurrentlyActive = computed(() => employee.value?.currentlyActive ?? true)
 
 const resolveEvaluationDate = (document, analysis = {}) => {
   const fields = analysis.extractedFields || {}

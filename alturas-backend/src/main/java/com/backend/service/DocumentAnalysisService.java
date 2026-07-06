@@ -365,6 +365,9 @@ public class DocumentAnalysisService {
         if (normalizedText.contains("PENDIENTE")) {
             return "NO_APTO";
         }
+        if (normalizedText.contains("APLAZADO")) {
+            return "NO_APTO";
+        }
 
         /*
          * Validar los casos positivos (APTO).
@@ -376,6 +379,9 @@ public class DocumentAnalysisService {
             return "APTO";
         }
         if (normalizedText.contains("SI PUEDE")) {
+            return "APTO";
+        }
+        if (normalizedText.contains("ADMITIDO")) {
             return "APTO";
         }
         if (normalizedText.contains("APTO")) {

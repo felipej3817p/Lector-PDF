@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public class ReportService {
 
     private static final Charset CSV_CHARSET = Charset.forName("ISO-8859-1");
-    private static final DateTimeFormatter CSV_DATE_FORMATTER = DateTimeFormatter.ofPattern("M/d/yyyy");
+    private static final DateTimeFormatter CSV_DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
     private final EmployeeRepository employeeRepository;
     private final ManagedDocumentRepository managedDocumentRepository;
@@ -87,7 +87,6 @@ public class ReportService {
 
             CellStyle titleStyle = buildTitleStyle(workbook);
             CellStyle headerStyle = buildHeaderStyle(workbook);
-            CellStyle noteStyle = buildNoteStyle(workbook);
             CellStyle bodyStyle = buildBodyStyle(workbook);
             CellStyle dateStyle = buildDateStyle(workbook);
             CellStyle greenStyle = buildStatusStyle(
@@ -248,8 +247,8 @@ public class ReportService {
                     resolveGender(employee.getGender()),
                     defaultIfBlank(defaultCountry, "COLOMBIA"),
                     formatCsvDate(employee.getBirthDate()),
-                    defaultIfBlank(defaultProfession, "Tecnico"),
-                    defaultIfBlank(defaultProcess, "Proceso de distribucion"),
+                    safe(employee.getEducationalLevel()),
+                    safe(employee.getWorkArea()),
                     safe(employee.getCurrentPosition()),
                     defaultIfBlank(defaultEconomicSector, "Sector minero y energetico"),
                     defaultIfBlank(defaultCompany, "Empresa de Energia de Boyaca"),
@@ -778,21 +777,6 @@ public class ReportService {
         return style;
     }
 
-    private CellStyle buildNoteStyle(Workbook workbook) {
-        Font font = workbook.createFont();
-        font.setFontHeightInPoints((short) 9);
-
-        CellStyle style = workbook.createCellStyle();
-        style.setFont(font);
-        style.setAlignment(HorizontalAlignment.CENTER);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setWrapText(true);
-        style.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        setThinBorders(style);
-
-        return style;
-    }
 
     private CellStyle buildBodyStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();

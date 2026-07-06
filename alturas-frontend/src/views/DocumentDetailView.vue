@@ -187,7 +187,7 @@
 
             <div class="info-item">
               <span>Estado técnico</span>
-              <strong>{{ documentData.processingStatus || '-' }}</strong>
+              <strong>{{ technicalStatusLabel(documentData.processingStatus) }}</strong>
             </div>
 
             <div class="info-item">
@@ -603,10 +603,18 @@ const canShowReviewActions = computed(() => {
 
 const canResendEmail = computed(() => {
   const reviewStatus = documentData.value?.reviewStatus
+  const notificationStatus = documentData.value?.notificationStatus
+
+  const hasValidStatus = 
+    reviewStatus === 'APPROVED' || 
+    reviewStatus === 'REJECTED' || 
+    notificationStatus === 'FAILED' || 
+    notificationStatus === 'SKIPPED' || 
+    notificationStatus === 'SENT'
 
   return (
     auth.canManageNotifications &&
-    (reviewStatus === 'APPROVED' || reviewStatus === 'REJECTED') &&
+    hasValidStatus &&
     Boolean(employeeEmail.value)
   )
 })
@@ -718,6 +726,14 @@ const shortValue = (value, max = 90) => {
   if (!text) return '-'
 
   return text.length > max ? `${text.slice(0, max).trim()}...` : text
+}
+
+const technicalStatusLabel = (status) => {
+  if (status === 'STORED') return 'GUARDADO'
+  if (status === 'PROCESSING') return 'PROCESANDO'
+  if (status === 'COMPLETED') return 'COMPLETADO'
+  if (status === 'ERROR') return 'ERROR'
+  return status || '-'
 }
 
 const resultLabel = (status) => {

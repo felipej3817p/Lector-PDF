@@ -794,6 +794,27 @@
             </div>
 
             <div class="form-field">
+              <label class="label" for="employeeEducationalLevel">Nivel Educativo</label>
+              <select
+                id="employeeEducationalLevel"
+                v-model.trim="employeeForm.educationalLevel"
+                class="form-select"
+                :disabled="employeeFormSaving"
+              >
+                <option value="">Seleccione...</option>
+                <option value="Basica Primaria">Básica Primaria</option>
+                <option value="Basica Secundaria">Básica Secundaria</option>
+                <option value="Tecnico">Técnico</option>
+                <option value="Tecnologo">Tecnólogo</option>
+                <option value="Profesional">Profesional</option>
+                <option value="Especializacion">Especialización</option>
+                <option value="Maestria">Maestría</option>
+                <option value="Doctorado">Doctorado</option>
+                <option value="Ninguno">Ninguno</option>
+              </select>
+            </div>
+
+            <div class="form-field">
               <label class="label" for="birthDate">Fecha nacimiento</label>
               <input
                 id="birthDate"
@@ -961,6 +982,7 @@ const createEmptyEmployeeForm = () => ({
   employer: 'EBSA',
   arl: '',
   gender: '',
+  educationalLevel: '',
   birthDate: '',
   active: true
 })
@@ -1396,6 +1418,7 @@ const openEmployeeFormModal = (employee = null) => {
     employer: employee.employer || 'EBSA',
     arl: employee.arl || '',
     gender: employee.gender || '',
+    educationalLevel: employee.educationalLevel || '',
     birthDate: toDateInputValue(employee.birthDate),
     active: employee.active !== false
   }
@@ -1439,6 +1462,7 @@ const buildEmployeePayload = () => {
     employer: employeeForm.value.employer.trim(),
     arl: employeeForm.value.arl.trim(),
     gender: employeeForm.value.gender.trim(),
+    educationalLevel: employeeForm.value.educationalLevel.trim(),
     birthDate: normalizeDateForPayload(employeeForm.value.birthDate),
     active: Boolean(employeeForm.value.active)
   }

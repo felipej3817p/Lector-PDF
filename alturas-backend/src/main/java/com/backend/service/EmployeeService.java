@@ -265,6 +265,7 @@ public class EmployeeService {
         employee.setArl(safe(request.getArl()));
         employee.setEmail(safe(request.getEmail()));
         employee.setZone(safe(request.getZone()));
+        employee.setEducationalLevel(safe(request.getEducationalLevel()));
         employee.setAreaCode(resolvedArea);
         employee.setActive(request.isActive());
         employee.setActiveStartDate(request.getActiveStartDate());
@@ -294,6 +295,7 @@ public class EmployeeService {
                 employee.getArl(),
                 employee.getEmail(),
                 employee.getZone(),
+                employee.getEducationalLevel(),
                 employee.getAreaCode(),
                 employee.isActive(),
                 employee.isCurrentlyActive(),

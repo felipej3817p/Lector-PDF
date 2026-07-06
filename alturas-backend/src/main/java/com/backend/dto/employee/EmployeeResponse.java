@@ -22,6 +22,7 @@ public class EmployeeResponse {
     private String arl;
     private String email;
     private String zone;
+    private String educationalLevel;
     private AreaCode areaCode;
     private boolean active;
     private boolean currentlyActive;
@@ -55,6 +56,7 @@ public class EmployeeResponse {
             String arl,
             String email,
             String zone,
+            String educationalLevel,
             AreaCode areaCode,
             boolean active,
             boolean currentlyActive,
@@ -84,6 +86,7 @@ public class EmployeeResponse {
         this.arl = arl;
         this.email = email;
         this.zone = zone;
+        this.educationalLevel = educationalLevel;
         this.areaCode = areaCode;
         this.active = active;
         this.currentlyActive = currentlyActive;
@@ -225,6 +228,14 @@ public class EmployeeResponse {
 
     public void setZone(String zone) {
         this.zone = zone;
+    }
+
+    public String getEducationalLevel() {
+        return educationalLevel;
+    }
+
+    public void setEducationalLevel(String educationalLevel) {
+        this.educationalLevel = educationalLevel;
     }
 
     public boolean isActive() {
