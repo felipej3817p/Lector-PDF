@@ -213,13 +213,23 @@ public class ReportService {
      * Separador: ;
      */
     public byte[] generateMinistryCsv(Map<String, String> filters) {
-        String resultStatusFilter = normalizeResultStatus(filters.get("resultStatus"));
+        String filterValue = filters.get("resultStatus");
+        if (filterValue == null || filterValue.isBlank()) {
+            filterValue = "APTO";
+        }
+        String resultStatusFilter = normalizeResultStatus(filterValue);
+        
         LocalDate uploadedFrom = parseDate(firstNonBlank(filters.get("uploadedFrom"), filters.get("from")));
         LocalDate uploadedTo = parseDate(firstNonBlank(filters.get("uploadedTo"), filters.get("to")));
 
-        List<MinistryCsvRow> rows = getAccessibleDocuments().stream()
-                .filter(document -> matchesUploadDate(document, uploadedFrom, uploadedTo))
-                .map(document -> toMinistryCsvRowOrNull(document, filters, resultStatusFilter))
+        List<MinistryCsvRow> rows = getAccessibleEmployees().stream()
+                .map(employee -> {
+                    List<ManagedDocument> docs = managedDocumentRepository.findByEmployeeIdOrderByUploadedAtDesc(employee.getId());
+                    if (docs.isEmpty()) return null;
+                    ManagedDocument latestDocument = docs.get(0);
+                    if (!matchesUploadDate(latestDocument, uploadedFrom, uploadedTo)) return null;
+                    return toMinistryCsvRowOrNull(latestDocument, filters, resultStatusFilter);
+                })
                 .filter(Objects::nonNull)
                 .sorted(Comparator
                         .comparing(MinistryCsvRow::uploadedAtSafe, Comparator.nullsLast(Comparator.reverseOrder()))
@@ -312,7 +322,12 @@ public class ReportService {
         String mode = safe(filters.get("mode")).toLowerCase(Locale.ROOT);
         boolean historyMode = "history".equals(mode);
 
-        String resultStatusFilter = normalizeResultStatus(filters.get("resultStatus"));
+        String filterValue = filters.get("resultStatus");
+        if (filterValue == null || filterValue.isBlank()) {
+            filterValue = "APTO";
+        }
+        String resultStatusFilter = normalizeResultStatus(filterValue);
+        
         LocalDate from = parseDate(filters.get("from"));
         LocalDate to = parseDate(filters.get("to"));
 
@@ -325,6 +340,14 @@ public class ReportService {
         for (Employee employee : employees) {
             List<ManagedDocument> documents = managedDocumentRepository
                     .findByEmployeeIdOrderByUploadedAtDesc(employee.getId());
+
+            if (documents.isEmpty()) {
+                continue;
+            }
+
+            if (!historyMode) {
+                documents = List.of(documents.get(0));
+            }
 
             List<AptitudeReportRow> employeeRows = new ArrayList<>();
 

@@ -1201,7 +1201,8 @@ const rows = computed(() => {
     .map((employee) => {
       const latestDocument = latestDocumentByEmployeeId.value[employee.id] || null
       const analysis = latestDocument ? analysisByDocumentId.value[latestDocument.id] : null
-      const fechaConcepto = documentEvaluationDate(latestDocument)
+      const fechaConceptoRaw = documentEvaluationDate(latestDocument)
+      const fechaConcepto = fechaConceptoRaw || latestDocument?.uploadedAt || ''
       const evaluationExpired = isEvaluationExpired(fechaConcepto)
       const daysRemaining = getDaysRemaining(fechaConcepto)
       const expiresAt = getExpirationTime(fechaConcepto)

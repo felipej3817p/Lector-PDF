@@ -25,43 +25,45 @@
         {{ successMessage }}
       </div>
 
-      <div v-if="eligibilityLoading" class="state-box">
-        Validando si el trabajador puede cargar constancia...
-      </div>
-
-      <div v-else-if="!certificateEligibility.eligible" class="state-box warning-box">
-        {{ certificateEligibility.message || 'La carga de constancia se habilita cuando el trabajador tenga una evaluación aprobada y notificada correctamente.' }}
-      </div>
-
-      <div v-if="certificateEligibility.eligible" class="upload-box">
-        <div>
-          <label class="label" for="certificateFile">Archivo de constancia</label>
-          <input
-            id="certificateFile"
-            ref="fileInput"
-            type="file"
-            class="form-control"
-            accept="application/pdf,.pdf"
-            :disabled="uploading"
-            @change="handleFileChange"
-          />
-
-          <p class="help-text">
-            Solo se permite PDF. El archivo quedará asociado al trabajador.
-          </p>
+      <template v-if="canModify">
+        <div v-if="eligibilityLoading" class="state-box">
+          Validando si el trabajador puede cargar constancia...
         </div>
 
-        <button
-          type="button"
-          class="primary-btn"
-          :disabled="uploading || !selectedFile"
-          @click="uploadFile"
-        >
-          {{ uploading ? 'Cargando...' : 'Cargar constancia' }}
-        </button>
-      </div>
+        <div v-else-if="!certificateEligibility.eligible" class="state-box warning-box">
+          {{ certificateEligibility.message || 'La carga de constancia se habilita cuando el trabajador tenga una evaluación aprobada y notificada correctamente.' }}
+        </div>
 
-      <div class="hr"></div>
+        <div v-if="certificateEligibility.eligible" class="upload-box">
+          <div>
+            <label class="label" for="certificateFile">Archivo de constancia</label>
+            <input
+              id="certificateFile"
+              ref="fileInput"
+              type="file"
+              class="form-control"
+              accept="application/pdf,.pdf"
+              :disabled="uploading"
+              @change="handleFileChange"
+            />
+
+            <p class="help-text">
+              Solo se permite PDF. El archivo quedará asociado al trabajador.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="primary-btn"
+            :disabled="uploading || !selectedFile"
+            @click="uploadFile"
+          >
+            {{ uploading ? 'Cargando...' : 'Cargar constancia' }}
+          </button>
+        </div>
+
+        <div class="hr"></div>
+      </template>
 
       <div class="certificates-table-header">
         <div>
@@ -145,7 +147,7 @@
                       Descargar
                     </button>
 
-                    <button type="button" class="secondary-btn danger-btn tiny-btn" @click="removeFile(certificate)">
+                    <button v-if="canModify" type="button" class="secondary-btn danger-btn tiny-btn" @click="removeFile(certificate)">
                       Eliminar
                     </button>
                   </div>
@@ -214,6 +216,13 @@ import {
   getTrainingCertificates,
   uploadTrainingCertificate
 } from '../api/trainingCertificates'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
+
+const canModify = computed(() => {
+  return authStore.user?.role === 'ADMIN' || authStore.user?.role === 'SUPER_ADMIN' || authStore.user?.role === 'OPERADOR'
+})
 
 const props = defineProps({
   employeeId: {

@@ -146,7 +146,7 @@ public class SecurityConfig {
                         .hasAnyRole("ADMIN", "SUPER_ADMIN", "OPERADOR")
 
                         .requestMatchers(HttpMethod.DELETE, "/api/certificates/**")
-                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN", "OPERADOR")
 
                         /*
                          * El resto de consultas autenticadas quedan permitidas,
