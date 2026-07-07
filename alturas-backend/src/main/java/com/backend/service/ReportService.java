@@ -436,21 +436,7 @@ public class ReportService {
         return employeeRepository.findByAreaCodeIn(allowedAreas);
     }
 
-    private List<ManagedDocument> getAccessibleDocuments() {
-        User currentUser = accessScopeService.getCurrentUser();
 
-        if (accessScopeService.hasGlobalDocumentAccess(currentUser)) {
-            return managedDocumentRepository.findAll();
-        }
-
-        Set<AreaCode> allowedAreas = accessScopeService.getAllowedAreas(currentUser);
-
-        if (allowedAreas == null || allowedAreas.isEmpty()) {
-            return List.of();
-        }
-
-        return managedDocumentRepository.findByAreaCodeIn(allowedAreas);
-    }
 
     private boolean matchesEmployeeFilters(Employee employee, Map<String, String> filters) {
         String documentNumber = safe(filters.get("documentNumber"));
