@@ -329,7 +329,7 @@ const initialExcelFilters = () => ({
   documentNumber: '',
   name: '',
   areaCode: '',
-  resultStatus: '',
+  resultStatus: 'APTO',
   position: '',
   from: '',
   to: ''
@@ -350,7 +350,7 @@ const initialCsvFilters = () => ({
   name: '',
   areaCode: '',
   position: '',
-  resultStatus: '',
+  resultStatus: 'APTO',
   from: firstDayOfCurrentMonth(),
   to: todayIsoDate()
 })
@@ -385,7 +385,7 @@ const showDownloadResult = (result) => {
   if (result?.empty) {
     showToast(
       'Sin datos',
-      result?.message || 'No se encontraron trabajadores con esos filtros.',
+      result?.message || 'No hay ningún trabajador evaluado.',
       'warning'
     )
     return
@@ -416,7 +416,7 @@ const exportExcel = async () => {
   } catch (err) {
     showToast(
       'Error',
-      err?.message || 'No se pudoo generar el reporte. Intenta nuevamente.',
+      err?.message || 'No se pudo generar el reporte. Intenta nuevamente.',
       'error'
     )
   } finally {

@@ -951,7 +951,7 @@ const subzoneFilter = ref(sessionStorage.getItem('emp_subzone') || '')
 const resultFilter = ref(sessionStorage.getItem('emp_result') || '')
 const reviewFilter = ref(sessionStorage.getItem('emp_review') || '')
 const notificationFilter = ref(sessionStorage.getItem('emp_notif') || '')
-const statusFilter = ref(sessionStorage.getItem('emp_status') || 'active')
+const statusFilter = ref(sessionStorage.getItem('emp_status') || '')
 const fromDate = ref(sessionStorage.getItem('emp_from') || '')
 const toDate = ref(sessionStorage.getItem('emp_to') || '')
 
@@ -1386,7 +1386,7 @@ const resetFilters = () => {
   resultFilter.value = ''
   reviewFilter.value = ''
   notificationFilter.value = ''
-  statusFilter.value = 'active'
+  statusFilter.value = ''
   fromDate.value = ''
   toDate.value = ''
   currentPage.value = 1

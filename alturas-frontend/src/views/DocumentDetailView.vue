@@ -127,7 +127,7 @@
               :disabled="reviewing"
               @click="openReviewModal('reject')"
             >
-              Rechazar
+              Revisar
             </button>
           </div>
 
@@ -136,7 +136,7 @@
           </div>
 
           <div v-if="documentData.reviewStatus === 'REJECTED'" class="state-box error mt-3 mb-0">
-            Documento rechazado. Comentario:
+            Documento enviado a revisión. Comentario:
             <strong>{{ documentData.reviewComment || '-' }}</strong>
           </div>
         </div>
@@ -673,19 +673,19 @@ const employeeAreaCode = computed(() => employeeData.value?.areaCode || document
 const reviewModalTitle = computed(() => {
   return reviewAction.value === 'approve'
     ? 'Aprobar evaluación'
-    : 'Rechazar evaluación'
+    : 'Revisar documento'
 })
 
 const reviewModalDescription = computed(() => {
   return reviewAction.value === 'approve'
     ? 'Al aprobar, el sistema intentará enviar el correo al trabajador y a las copias configuradas.'
-    : 'Al rechazar, el sistema intentará enviar el correo al trabajador con el comentario registrado.'
+    : 'Al solicitar la revisión, el sistema notificará al cargador original con el comentario registrado para que lo revise.'
 })
 
 const reviewModalConfirmLabel = computed(() => {
   return reviewAction.value === 'approve'
     ? 'Aprobar y enviar'
-    : 'Rechazar y enviar'
+    : 'Revisar'
 })
 
 const formatDate = (value) => {
@@ -746,7 +746,7 @@ const reviewLabel = (status) => {
   if (status === 'NOT_PENDING') return 'NO ENVIADO'
   if (status === 'PENDING_REVIEW') return 'PENDIENTE'
   if (status === 'APPROVED') return 'APROBADO'
-  if (status === 'REJECTED') return 'RECHAZADO'
+  if (status === 'REJECTED') return 'A REVISAR'
   return status || 'PENDIENTE'
 }
 
@@ -841,11 +841,13 @@ const showToast = (title, message, type = 'success') => {
 const showReviewNotificationToast = (actionLabel) => {
   const status = documentData.value?.notificationStatus
   const log = latestEmailLog.value
+  const isRejected = documentData.value?.reviewStatus === 'REJECTED'
+  const recipient = isRejected ? 'al cargador original' : 'al trabajador'
 
   if (status === 'SENT') {
     showToast(
       'Correo enviado',
-      `${actionLabel}. La notificación fue enviada correctamente al trabajador.`,
+      `${actionLabel}. La notificación fue enviada correctamente ${recipient}.`,
       'success'
     )
     return
@@ -1065,7 +1067,7 @@ const approveDocumentAction = async () => {
 
 const rejectDocumentAction = async () => {
   if (!auth.canReviewDocuments) {
-    error.value = 'No tienes permisos para rechazar documentos.'
+    error.value = 'No tienes permisos para solicitar revisión.'
     return
   }
 
@@ -1078,13 +1080,13 @@ const rejectDocumentAction = async () => {
     forceCloseReviewModal()
     await loadDetail()
 
-    showReviewNotificationToast('Documento rechazado')
+    showReviewNotificationToast('Documento enviado a revisión')
   } catch (err) {
-    const message = err?.response?.data?.message || 'No se pudo rechazar el documento.'
+    const message = err?.response?.data?.message || 'No se pudo solicitar la revisión del documento.'
 
     error.value = message
-    showToast('No se pudo rechazar', message, 'error')
-    console.error('Error rechazando documento:', err)
+    showToast('No se pudo enviar', message, 'error')
+    console.error('Error solicitando revisión:', err)
   } finally {
     reviewing.value = false
   }

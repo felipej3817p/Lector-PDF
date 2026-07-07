@@ -12,9 +12,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
@@ -74,9 +72,9 @@ public class ReportService {
         List<AptitudeReportRow> rows = buildAptitudeRows(filters);
 
         if (rows.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NO_CONTENT,
-                    "No se encontraron trabajadores con esos filtros.");
+            throw new com.backend.exception.AppException(
+                    com.backend.exception.ErrorCode.VALIDATION_ERROR,
+                    "No hay ningún trabajador evaluado.");
         }
 
         try (
@@ -214,9 +212,6 @@ public class ReportService {
      */
     public byte[] generateMinistryCsv(Map<String, String> filters) {
         String filterValue = filters.get("resultStatus");
-        if (filterValue == null || filterValue.isBlank()) {
-            filterValue = "APTO";
-        }
         String resultStatusFilter = normalizeResultStatus(filterValue);
         
         LocalDate uploadedFrom = parseDate(firstNonBlank(filters.get("uploadedFrom"), filters.get("from")));
@@ -224,7 +219,13 @@ public class ReportService {
 
         List<MinistryCsvRow> rows = getAccessibleEmployees().stream()
                 .map(employee -> {
-                    List<ManagedDocument> docs = managedDocumentRepository.findByEmployeeIdOrderByUploadedAtDesc(employee.getId());
+                    List<ManagedDocument> docs = managedDocumentRepository.findByEmployeeIdOrderByUploadedAtDesc(employee.getId())
+                            .stream()
+                            .filter(doc -> {
+                                String rs = safe(doc.getReviewStatus());
+                                return "APPROVED".equals(rs);
+                            })
+                            .toList();
                     if (docs.isEmpty()) return null;
                     ManagedDocument latestDocument = docs.get(0);
                     if (!matchesUploadDate(latestDocument, uploadedFrom, uploadedTo)) return null;
@@ -237,9 +238,9 @@ public class ReportService {
                 .toList();
 
         if (rows.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NO_CONTENT,
-                    "No se encontraron trabajadores APTO o NO APTO cargados con esos filtros.");
+            throw new com.backend.exception.AppException(
+                    com.backend.exception.ErrorCode.VALIDATION_ERROR,
+                    "No hay ningún trabajador evaluado.");
         }
 
         StringBuilder csv = new StringBuilder();
@@ -323,9 +324,6 @@ public class ReportService {
         boolean historyMode = "history".equals(mode);
 
         String filterValue = filters.get("resultStatus");
-        if (filterValue == null || filterValue.isBlank()) {
-            filterValue = "APTO";
-        }
         String resultStatusFilter = normalizeResultStatus(filterValue);
         
         LocalDate from = parseDate(filters.get("from"));
@@ -339,7 +337,13 @@ public class ReportService {
 
         for (Employee employee : employees) {
             List<ManagedDocument> documents = managedDocumentRepository
-                    .findByEmployeeIdOrderByUploadedAtDesc(employee.getId());
+                    .findByEmployeeIdOrderByUploadedAtDesc(employee.getId())
+                    .stream()
+                    .filter(doc -> {
+                        String rs = safe(doc.getReviewStatus());
+                        return "APPROVED".equals(rs);
+                    })
+                    .toList();
 
             if (documents.isEmpty()) {
                 continue;
@@ -389,10 +393,18 @@ public class ReportService {
                     continue;
                 }
 
+                String cargo = safe(employee.getCurrentPosition());
+                if (cargo.isBlank() && analysis.getExtractedFields() != null) {
+                    cargo = firstNonBlank(
+                        String.valueOf(analysis.getExtractedFields().getOrDefault("position", "")),
+                        String.valueOf(analysis.getExtractedFields().getOrDefault("cargo", ""))
+                    );
+                }
+
                 employeeRows.add(new AptitudeReportRow(
                         fullName(employee),
                         safe(employee.getDocumentNumber()),
-                        safe(employee.getCurrentPosition()),
+                        cargo,
                         resolveAreaLabel(employee),
                         resultLabel(resultStatus),
                         uploadedDate != null ? uploadedDate : conceptDate));
@@ -589,20 +601,21 @@ public class ReportService {
                 .replace(" ", "_")
                 .trim();
 
+        if (normalized.isBlank()) {
+            return "";
+        }
+
         if ("NO_APTO".equals(normalized) || "NO_APTO_TEMPORAL".equals(normalized)) {
             return "NO_APTO";
         }
         if ("VIGENCIA_VENCIDA".equals(normalized)) {
             return "VIGENCIA_VENCIDA";
         }
-
-        if ("APTO".equals(value)) {
+        if ("APTO".equals(normalized)) {
             return "APTO";
         }
-        if ("NO_APTO".equals(value) || "NO APTO".equals(value)) {
-            return "NO_APTO";
-        }
-        return "NO_APTO";
+
+        return normalized;
     }
 
     private boolean isExpired(LocalDate conceptDate) {

@@ -1,6 +1,6 @@
 import http from './http'
 
-const EMPTY_REPORT_MESSAGE = 'No se encontraron trabajadores con esos filtros.'
+const EMPTY_REPORT_MESSAGE = 'No hay ningún trabajador evaluado.'
 const GENERIC_REPORT_ERROR = 'No se pudo generar el reporte. Intenta nuevamente.'
 
 const buildQueryParams = (filters = {}) => {
@@ -77,7 +77,9 @@ const normalizeErrorMessage = (message = '') => {
     text.includes('no se encontraron trabajadores') ||
     text.includes('no hay registros') ||
     text.includes('no hay información') ||
-    text.includes('filtros seleccionados')
+    text.includes('filtros seleccionados') ||
+    text.includes('no hay ningún trabajador evaluado') ||
+    text.includes('no hay ningun trabajador evaluado')
   ) {
     return EMPTY_REPORT_MESSAGE
   }
