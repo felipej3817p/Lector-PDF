@@ -193,6 +193,17 @@
                   Configura aprobadores, copias, areas y coordinadores desde un solo modulo.
                 </p>
               </div>
+
+              <div class="header-actions">
+                <button
+                  type="button"
+                  class="primary-btn"
+                  :disabled="loading"
+                  @click="saveLocalSettings"
+                >
+                  {{ loading ? 'Guardando...' : 'Guardar correos' }}
+                </button>
+              </div>
             </div>
 
             <div class="mail-grid">
@@ -335,16 +346,7 @@
                   <span class="status-pill-neutral">Rechazado -> trabajador + comentario</span>
                 </div>
 
-                <div class="actions-row mt-4">
-                  <button
-                    type="button"
-                    class="primary-btn"
-                    :disabled="loading"
-                    @click="saveLocalSettings"
-                  >
-                    {{ loading ? 'Guardando...' : 'Guardar correos' }}
-                  </button>
-                </div>
+
               </div>
             </div>
           </section>

@@ -1,6 +1,6 @@
 # Manual de Usuario y Programador - Alturas / Lector PDF
 
-Fecha: 15/06/2026
+Fecha: 08/07/2026
 
 ## 1. Objetivo
 
@@ -475,6 +475,6 @@ Recomendaciones:
 - No usar carga historica para documentos que deban ir a revision.
 - No usar carga normal para archivos antiguos si no se quiere notificacion.
 
-## Documentación Adicional
+## Documentaciï¿½n Adicional
 
 - Para entender a fondo la estructura de carpetas y el flujo de la base de datos (MongoDB), consulta el documento: [Arquitectura y Archivos](./ARQUITECTURA_Y_ARCHIVOS.md)
