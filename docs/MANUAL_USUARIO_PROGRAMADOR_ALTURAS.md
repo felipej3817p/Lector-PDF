@@ -474,3 +474,7 @@ Recomendaciones:
 - Revisar logs cuando aparezca codigo `ALT-SYS-001`.
 - No usar carga historica para documentos que deban ir a revision.
 - No usar carga normal para archivos antiguos si no se quiere notificacion.
+
+## Documentación Adicional
+
+- Para entender a fondo la estructura de carpetas y el flujo de la base de datos (MongoDB), consulta el documento: [Arquitectura y Archivos](./ARQUITECTURA_Y_ARCHIVOS.md)
