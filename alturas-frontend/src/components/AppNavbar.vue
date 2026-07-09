@@ -3,9 +3,14 @@
     <div class="sidebar-brand">
       <RouterLink :to="brandTarget" class="sidebar-brand__link">
         <img
-          src="/sst-alturas-icon.svg"
+          src="/logo-light-theme.png"
           alt="SSTAlturas"
-          class="sidebar-brand__logo"
+          class="sidebar-brand__logo light-theme-logo"
+        />
+        <img
+          src="/logo-dark-theme.png"
+          alt="SSTAlturas"
+          class="sidebar-brand__logo dark-theme-logo"
         />
 
         <span class="sidebar-brand__text">
@@ -164,10 +169,14 @@ const userInitials = computed(() => {
 
 <style scoped>
 .sidebar-brand__logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 14px;
+  height: 80px;
+  width: auto;
+  max-width: 100%;
   object-fit: contain;
   flex: 0 0 auto;
+}
+
+.sidebar-brand__logo.dark-theme-logo {
+  height: 64px;
 }
 </style>

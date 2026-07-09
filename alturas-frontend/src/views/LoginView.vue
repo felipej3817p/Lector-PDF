@@ -10,9 +10,14 @@
       <div class="card-body p-4 p-md-5">
         <div class="login-brand">
           <img
-            src="/sst-alturas-icon.svg"
+            src="/logo-light-theme.png"
             alt="SSTAlturas"
-            class="login-brand-logo"
+            class="login-brand-logo light-theme-logo"
+          />
+          <img
+            src="/logo-dark-theme.png"
+            alt="SSTAlturas"
+            class="login-brand-logo dark-theme-logo"
           />
 
           <div>
@@ -306,11 +311,15 @@ const onSubmit = async () => {
 }
 
 .login-brand-logo {
-  width: 74px;
-  height: 74px;
-  border-radius: 16px;
+  height: 100px;
+  width: auto;
+  max-width: 100%;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+.login-brand-logo.dark-theme-logo {
+  height: 80px;
 }
 
 .login-brand-title {

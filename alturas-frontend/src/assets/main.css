@@ -1159,3 +1159,7 @@ textarea.form-control {
     padding: 0.85rem !important;
   }
 }
+
+.dark-theme-logo { display: none; }
+:root[data-theme='dark'] .light-theme-logo { display: none; }
+:root[data-theme='dark'] .dark-theme-logo { display: block; }
