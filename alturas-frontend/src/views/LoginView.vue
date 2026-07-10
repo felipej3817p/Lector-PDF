@@ -11,17 +11,17 @@
         <div class="login-brand">
           <img
             src="/logo-light-theme.png"
-            alt="SSTAlturas"
+            alt="Alturas"
             class="login-brand-logo light-theme-logo"
           />
           <img
             src="/logo-dark-theme.png"
-            alt="SSTAlturas"
+            alt="Alturas"
             class="login-brand-logo dark-theme-logo"
           />
 
           <div>
-            <div class="login-brand-title">SSTAlturas</div>
+            <div class="login-brand-title">Alturas</div>
             <div class="login-brand-subtitle">Gestión de aptitud en alturas</div>
           </div>
         </div>

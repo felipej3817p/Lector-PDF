@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: light;
   --page-bg: #f7f8f9;
   --surface: #ffffff;
@@ -27,7 +27,7 @@
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 22px;
-  --sidebar-width: 280px;
+  --sidebar-width: 260px;
 }
 
 :root[data-theme='dark'] {

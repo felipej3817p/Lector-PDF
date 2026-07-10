@@ -4,18 +4,18 @@
       <RouterLink :to="brandTarget" class="sidebar-brand__link">
         <img
           src="/logo-light-theme.png"
-          alt="SSTAlturas"
+          alt="Alturas"
           class="sidebar-brand__logo light-theme-logo"
         />
         <img
           src="/logo-dark-theme.png"
-          alt="SSTAlturas"
+          alt="Alturas"
           class="sidebar-brand__logo dark-theme-logo"
         />
 
         <span class="sidebar-brand__text">
-          <strong>SSTAlturas</strong>
-          <small>Gestión de aptitud</small>
+          <strong>Alturas</strong>
+          <small>Gestión de aptitud en alturas</small>
         </span>
       </RouterLink>
     </div>
