@@ -14,8 +14,7 @@
         />
 
         <span class="sidebar-brand__text">
-          <strong>Alturas</strong>
-          <small>Gestión de aptitud en alturas</small>
+          <small>Gestión de aptitudes</small>
         </span>
       </RouterLink>
     </div>

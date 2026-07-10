@@ -27,7 +27,7 @@
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 22px;
-  --sidebar-width: 260px;
+  --sidebar-width: 240px;
 }
 
 :root[data-theme='dark'] {

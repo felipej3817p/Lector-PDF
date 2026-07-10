@@ -21,8 +21,7 @@
           />
 
           <div>
-            <div class="login-brand-title">Alturas</div>
-            <div class="login-brand-subtitle">Gestión de aptitud en alturas</div>
+            <div class="login-brand-subtitle">Gestión de aptitudes</div>
           </div>
         </div>
 
@@ -305,9 +304,12 @@ const onSubmit = async () => {
 
 .login-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 1.5rem;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
 .login-brand-logo {
@@ -329,7 +331,8 @@ const onSubmit = async () => {
 }
 
 .login-brand-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
