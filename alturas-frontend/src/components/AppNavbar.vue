@@ -2,16 +2,18 @@
   <aside class="app-sidebar" aria-label="Navegación principal">
     <div class="sidebar-brand">
       <RouterLink :to="brandTarget" class="sidebar-brand__link">
-        <img
-          src="/logo-light-theme.png"
-          alt="Alturas"
-          class="sidebar-brand__logo light-theme-logo"
-        />
-        <img
-          src="/logo-dark-theme.png"
-          alt="Alturas"
-          class="sidebar-brand__logo dark-theme-logo"
-        />
+        <div class="sidebar-brand__logo-container">
+          <img
+            src="/logofinalblanco.png"
+            alt="Alturas"
+            class="sidebar-brand__logo light-theme-logo"
+          />
+          <img
+            src="/logofinaloscuro.png"
+            alt="Alturas"
+            class="sidebar-brand__logo dark-theme-logo"
+          />
+        </div>
 
         <span class="sidebar-brand__text">
           <small>Gestión de aptitudes</small>
@@ -167,15 +169,23 @@ const userInitials = computed(() => {
 </script>
 
 <style scoped>
+.sidebar-brand__link {
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  text-align: center;
+}
+
 .sidebar-brand__logo {
-  height: 80px;
+  height: 100px;
   width: auto;
-  max-width: 100%;
+  max-width: 80%;
   object-fit: contain;
   flex: 0 0 auto;
 }
 
 .sidebar-brand__logo.dark-theme-logo {
-  height: 64px;
+  height: 120px;
 }
 </style>

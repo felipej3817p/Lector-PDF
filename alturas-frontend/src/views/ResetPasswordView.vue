@@ -10,12 +10,12 @@
       <div class="card-body p-4 p-md-5">
         <div class="login-brand">
           <img
-            src="/logo-light-theme.png"
+            src="/logofinalblanco.png"
             alt="Alturas"
             class="login-brand-logo light-theme-logo"
           />
           <img
-            src="/logo-dark-theme.png"
+            src="/logofinaloscuro.png"
             alt="Alturas"
             class="login-brand-logo dark-theme-logo"
           />
@@ -248,7 +248,7 @@ const onSubmit = async () => {
 }
 
 .login-brand-logo {
-  height: 100px;
+  height: 130px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -256,7 +256,7 @@ const onSubmit = async () => {
 }
 
 .login-brand-logo.dark-theme-logo {
-  height: 80px;
+  height: 130px;
 }
 
 .login-brand-title {

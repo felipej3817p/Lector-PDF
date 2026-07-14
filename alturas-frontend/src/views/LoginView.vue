@@ -9,16 +9,18 @@
     <section class="login-card card border-0">
       <div class="card-body p-4 p-md-5">
         <div class="login-brand">
-          <img
-            src="/logo-light-theme.png"
-            alt="Alturas"
-            class="login-brand-logo light-theme-logo"
-          />
-          <img
-            src="/logo-dark-theme.png"
-            alt="Alturas"
-            class="login-brand-logo dark-theme-logo"
-          />
+          <div class="login-brand-logo-container">
+            <img
+              src="/logofinalblanco.png"
+              alt="Alturas"
+              class="login-brand-logo light-theme-logo"
+            />
+            <img
+              src="/logofinaloscuro.png"
+              alt="Alturas"
+              class="login-brand-logo dark-theme-logo"
+            />
+          </div>
 
           <div>
             <div class="login-brand-subtitle">Gestión de aptitudes</div>
@@ -313,7 +315,7 @@ const onSubmit = async () => {
 }
 
 .login-brand-logo {
-  height: 100px;
+  height: 130px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -321,7 +323,7 @@ const onSubmit = async () => {
 }
 
 .login-brand-logo.dark-theme-logo {
-  height: 80px;
+  height: 130px;
 }
 
 .login-brand-title {

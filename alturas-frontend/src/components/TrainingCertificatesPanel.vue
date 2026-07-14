@@ -221,7 +221,7 @@ import { useAuthStore } from '../stores/auth'
 const authStore = useAuthStore()
 
 const canModify = computed(() => {
-  return authStore.user?.role === 'ADMIN' || authStore.user?.role === 'SUPER_ADMIN' || authStore.user?.role === 'OPERADOR'
+  return authStore.isSuperAdmin || authStore.isAdmin || authStore.isOperator
 })
 
 const props = defineProps({
