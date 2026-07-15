@@ -274,10 +274,12 @@ public class PdfFieldParserService {
                 extractNormalized(normalized, "Documento:\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(normalized, "Cédula:\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(normalized, "Cedula:\\s*([\\d\\.\\s-]{5,20})", 1),
+                extractNormalized(normalized, "C[eé]dula\\s+de\\s+ciudadan[ií]a\\s+n[uú]mero\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(normalized, "CC\\s*[:#-]?\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(ascii, "Identificacion:\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(ascii, "Numero de documento:\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(ascii, "Cedula:\\s*([\\d\\.\\s-]{5,20})", 1),
+                extractNormalized(ascii, "Cedula de ciudadania numero\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractDocumentNumberFromSignature(rawText));
 
         String cleaned = cleanDocumentNumber(fromKnownLabels);

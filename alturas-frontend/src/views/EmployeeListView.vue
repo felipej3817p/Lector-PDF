@@ -242,7 +242,7 @@
                   <col class="col-result" />
                   <col v-if="canViewWorkflowDetails" class="col-review" />
                   <col v-if="canViewWorkflowDetails" class="col-notification" />
-                  <col v-if="!isViewerOnly" class="col-date" />
+                  <col class="col-date" />
                   <col class="col-actions" />
                 </colgroup>
 
@@ -254,7 +254,7 @@
                     <th>Resultado</th>
                     <th v-if="canViewWorkflowDetails">Revision</th>
                     <th v-if="canViewWorkflowDetails">Notificacion</th>
-                    <th v-if="!isViewerOnly">Fecha evaluacion</th>
+                    <th>Fecha evaluacion</th>
                     <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -305,7 +305,7 @@
                       </span>
                     </td>
 
-                    <td v-if="!isViewerOnly">
+                    <td>
                       <div class="evaluation-date-cell">
                         <strong>{{ formatDate(row.fechaConcepto || row.uploadedAt) }}</strong>
                         <small v-if="row.evaluationExpired" class="expired-evaluation-note custom-expired-text">
@@ -518,17 +518,17 @@
             <strong>{{ formatDate(selectedRow.employee.birthDate) }}</strong>
           </div>
 
-          <div v-if="!isViewerOnly" class="detail-field">
+          <div class="detail-field">
             <span>Ultima evaluacion</span>
             <strong>{{ formatDate(selectedRow.fechaConcepto) }}</strong>
           </div>
 
-          <div v-if="!isViewerOnly" class="detail-field">
+          <div class="detail-field">
             <span>Vigencia evaluacion</span>
             <strong>{{ selectedRow.evaluationExpired ? 'Vencida' : selectedRow.documentId ? 'Vigente' : 'Sin evaluacion' }}</strong>
           </div>
 
-          <div v-if="!isViewerOnly" class="detail-field">
+          <div class="detail-field">
             <span>Fecha de carga</span>
             <strong>{{ formatDate(selectedRow.uploadedAt) }}</strong>
           </div>

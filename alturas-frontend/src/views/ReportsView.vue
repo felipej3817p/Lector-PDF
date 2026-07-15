@@ -29,6 +29,14 @@
 
           <div class="form-grid">
             <div class="form-field">
+              <label class="label" for="excelMode">Tipo de reporte</label>
+              <select id="excelMode" v-model="excelFilters.mode" class="form-select">
+                <option value="latest">Último concepto por trabajador</option>
+                <option value="history">Histórico completo (Todas las evaluaciones)</option>
+              </select>
+            </div>
+
+            <div class="form-field">
               <label class="label" for="excelDocumentNumber">Cédula</label>
               <input
                 id="excelDocumentNumber"
@@ -91,7 +99,7 @@
             </div>
 
             <div class="form-field">
-              <label class="label" for="excelFrom">Fecha de carga desde</label>
+              <label class="label" for="excelFrom">Fecha de evaluación de concepto médico (Desde)</label>
               <input
                 id="excelFrom"
                 v-model="excelFilters.from"
@@ -101,7 +109,7 @@
             </div>
 
             <div class="form-field">
-              <label class="label" for="excelTo">Fecha de carga hasta</label>
+              <label class="label" for="excelTo">Fecha de evaluación de concepto médico (Hasta)</label>
               <input
                 id="excelTo"
                 v-model="excelFilters.to"
@@ -213,7 +221,7 @@
             </div>
 
             <div class="form-field">
-              <label class="label" for="csvFrom">Carga desde</label>
+              <label class="label" for="csvFrom">Fecha de evaluación (Desde)</label>
               <input
                 id="csvFrom"
                 v-model="csvFilters.from"
@@ -223,7 +231,7 @@
             </div>
 
             <div class="form-field">
-              <label class="label" for="csvTo">Carga hasta</label>
+              <label class="label" for="csvTo">Fecha de evaluación (Hasta)</label>
               <input
                 id="csvTo"
                 v-model="csvFilters.to"
@@ -237,7 +245,7 @@
           <div class="csv-format-box">
             <span class="label">Formato de salida</span>
             <code>
-              CC;Número documento;Primer nombre;Segundo nombre;Primer apellido;Segundo apellido;Sexo;País;Fecha nacimiento;Nivel educativo;Área;Cargo;Sector;Empresa;ARL
+              CC;Número documento;Primer nombre;Segundo nombre;Primer apellido;Segundo apellido;Sexo;País;Fecha nacimiento;Nivel educativo;Distribución;Área;Cargo;Sector;Empresa;ARL
             </code>
           </div>
 
@@ -326,6 +334,7 @@ const toastType = ref('success')
 let toastTimeout = null
   
 const initialExcelFilters = () => ({
+  mode: 'latest',
   documentNumber: '',
   name: '',
   areaCode: '',

@@ -27,6 +27,7 @@ public class HistoricalImportIssue {
     private String uploadedBy;
     private LocalDateTime createdAt;
     private String status;
+    private String uploadType;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -58,4 +59,6 @@ public class HistoricalImportIssue {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getUploadType() { return uploadType; }
+    public void setUploadType(String uploadType) { this.uploadType = uploadType; }
 }

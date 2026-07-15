@@ -199,15 +199,8 @@ public class TrainingCertificateService {
     }
 
     private void validateCertificateEligibility(String employeeId) {
-        Optional<ManagedDocument> validDocument = findLatestApprovedAndNotifiedDocument(employeeId);
-
-        if (validDocument.isPresent()) {
-            return;
-        }
-
-        Optional<ManagedDocument> latestDocument = findLatestDocument(employeeId);
-
-        throw new IllegalArgumentException(buildEligibilityMessage(latestDocument.orElse(null)));
+        // Validation removed as per user request to allow uploading
+        // Constancias regardless of whether the worker is fully qualified.
     }
 
     private Optional<ManagedDocument> findLatestApprovedAndNotifiedDocument(String employeeId) {

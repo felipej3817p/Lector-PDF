@@ -532,7 +532,7 @@ const isViewerOnly = computed(() => {
 })
 
 const canSeeCertificates = computed(() => {
-  return !isApproverOnly.value && !isViewerOnly.value
+  return !isApproverOnly.value
 })
 
 const canViewWorkflowDetails = computed(() => !isViewerOnly.value)

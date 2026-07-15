@@ -15,7 +15,7 @@
         </RouterLink>
 
         <RouterLink to="/documents/historical/issues" class="secondary-btn">
-          PDFs no asociados
+          PDFs no asociados de Carga y Constancia
         </RouterLink>
 
         <RouterLink
@@ -104,6 +104,20 @@
             <span>
               <strong>Guardar carpeta historica</strong>
               <small>Usala para PDFs antiguos. Solo guarda el archivo asociado al trabajador; no califica, no envia correos y reporta los PDFs sin trabajador.</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="historical-upload-option mt-2">
+          <label class="checkbox-field historical-upload-option__label">
+            <input
+              v-model="constanciasMode"
+              type="checkbox"
+              :disabled="batchLoading"
+            />
+            <span>
+              <strong>Guardar constancias</strong>
+              <small>Guarda constancias de aptitud de forma masiva buscando por número de cédula en el nombre del archivo PDF (ej: 102030.pdf).</small>
             </span>
           </label>
         </div>
@@ -230,7 +244,7 @@
               class="spinner-border spinner-border-sm me-2"
               aria-hidden="true"
             ></span>
-            {{ batchLoading ? 'Procesando...' : (historicalMode ? 'Guardar historicos' : 'Procesar evaluaciones') }}
+            {{ batchLoading ? 'Procesando...' : (constanciasMode ? 'Guardar constancias' : (historicalMode ? 'Guardar historicos' : 'Procesar evaluaciones')) }}
           </button>
         </div>
       </div>
@@ -354,12 +368,12 @@
               <tr>
                 <th>Archivo</th>
                 <th>Estado</th>
-                <th>Trabajador</th>
-                <th>Cédula</th>
-                  <th v-if="!batchSummary?.historical">Fecha evaluacion</th>
-                  <th v-if="!batchSummary?.historical">Fecha nacimiento</th>
-                  <th v-if="!batchSummary?.historical">Resultado</th>
-                  <th v-if="!batchSummary?.historical">Revisión</th>
+                <th v-if="!constanciasMode">Trabajador</th>
+                <th v-if="!constanciasMode">Cédula</th>
+                  <th v-if="!batchSummary?.historical && !constanciasMode">Fecha evaluacion</th>
+                  <th v-if="!batchSummary?.historical && !constanciasMode">Fecha nacimiento</th>
+                  <th v-if="!batchSummary?.historical && !constanciasMode">Resultado</th>
+                  <th v-if="!batchSummary?.historical && !constanciasMode">Revisión</th>
                 <th>Observación</th>
                 <th class="text-center">Detalle</th>
               </tr>
@@ -384,31 +398,33 @@
                   </span>
                 </td>
 
-                <td>
+                <td v-if="!constanciasMode">
                   <strong>{{ item.employeeName || '-' }}</strong>
                 </td>
 
-                <td>{{ item.employeeDocument || '-' }}</td>
+                <td v-if="!constanciasMode">
+                  {{ item.employeeDocument || '-' }}
+                </td>
 
-                  <td v-if="!batchSummary?.historical">
-                    {{ formatDate(item.fechaEvaluacion || item.evaluationDate) }}
-                  </td>
+                <td v-if="!batchSummary?.historical && !constanciasMode">
+                  {{ formatDate(item.fechaEvaluacion || item.evaluationDate) }}
+                </td>
 
-                  <td v-if="!batchSummary?.historical">
-                    {{ formatDate(item.birthDate || item.fechaNacimiento) }}
-                  </td>
+                <td v-if="!batchSummary?.historical && !constanciasMode">
+                  {{ formatDate(item.birthDate || item.fechaNacimiento) }}
+                </td>
 
-                  <td v-if="!batchSummary?.historical">
-                    <span :class="resultStatusClass(item.resultStatus)">
-                      {{ resultStatusLabel(item.resultStatus) }}
-                    </span>
-                  </td>
+                <td v-if="!batchSummary?.historical && !constanciasMode">
+                  <span :class="resultStatusClass(item.resultStatus)">
+                    {{ resultStatusLabel(item.resultStatus) }}
+                  </span>
+                </td>
 
-                  <td v-if="!batchSummary?.historical">
-                    <span :class="reviewStatusClass(item.reviewStatus)">
-                      {{ reviewStatusLabel(item.reviewStatus) }}
-                    </span>
-                  </td>
+                <td v-if="!batchSummary?.historical && !constanciasMode">
+                  <span :class="reviewStatusClass(item.reviewStatus)">
+                    {{ reviewStatusLabel(item.reviewStatus) }}
+                  </span>
+                </td>
 
                 <td class="message-cell">
                   {{ userProcessingMessage(item) }}
@@ -560,7 +576,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
@@ -589,10 +605,18 @@ const batchResultCurrentPage = ref(1)
 const batchSummary = ref(null)
 const dragActive = ref(false)
 const historicalMode = ref(false)
+const constanciasMode = ref(false)
 const showFullApproverError = ref(false)
 const processingIssueModal = ref(null)
 const resultsSectionRef = ref(null)
 let uploadSessionPoller = null
+
+watch(historicalMode, (val) => {
+  if (val) constanciasMode.value = false
+})
+watch(constanciasMode, (val) => {
+  if (val) historicalMode.value = false
+})
 
 const canShowReview = computed(() => {
   return auth.isSuperAdmin || auth.isAdmin || auth.isApprover
@@ -814,7 +838,9 @@ const uploadFileBatch = async (files) => {
   const formData = new FormData()
   formData.append('documentType', 'CONCEPTO_MEDICO')
   formData.append('examType', 'TRABAJO_EN_ALTURAS')
-  formData.append('historical', historicalMode.value ? 'true' : 'false')
+  
+  const uploadType = constanciasMode.value ? 'CONSTANCIA' : (historicalMode.value ? 'HISTORICAL' : 'REGULAR')
+  formData.append('uploadType', uploadType)
 
   files.forEach((file) => {
     formData.append('files', file)
@@ -1159,6 +1185,7 @@ const normalizeProcessingError = (item) => {
     normalized.includes('identificación') ||
     normalized.includes('identificacion')
   ) {
+
     return {
       title: 'No se identificó la cédula',
       description: 'El sistema no pudo identificar correctamente al trabajador.',

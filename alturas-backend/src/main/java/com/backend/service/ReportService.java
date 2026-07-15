@@ -137,7 +137,7 @@ public class ReportService {
                     "Cargo",
                     "Zona/ área",
                     "Resultado concepto de aptitud para trabajo en alturas",
-                    "Fecha de carga"
+                    "Fecha de concepto médico"
             };
 
             for (int i = 0; i < headers.length; i++) {
@@ -228,8 +228,12 @@ public class ReportService {
                             .toList();
                     if (docs.isEmpty()) return null;
                     ManagedDocument latestDocument = docs.get(0);
-                    if (!matchesUploadDate(latestDocument, uploadedFrom, uploadedTo)) return null;
-                    return toMinistryCsvRowOrNull(latestDocument, filters, resultStatusFilter);
+                    MinistryCsvRow row = toMinistryCsvRowOrNull(latestDocument, filters, resultStatusFilter);
+                    if (row == null) return null;
+                    LocalDate conceptDate = row.conceptDateSafe();
+                    if (uploadedFrom != null && (conceptDate == null || conceptDate.isBefore(uploadedFrom))) return null;
+                    if (uploadedTo != null && (conceptDate == null || conceptDate.isAfter(uploadedTo))) return null;
+                    return row;
                 })
                 .filter(Objects::nonNull)
                 .sorted(Comparator
@@ -259,10 +263,11 @@ public class ReportService {
                     defaultIfBlank(defaultCountry, "COLOMBIA"),
                     formatCsvDate(employee.getBirthDate()),
                     safe(employee.getEducationalLevel()),
+                    "", // Distribución por defecto vacía
                     safe(employee.getWorkArea()),
                     safe(employee.getCurrentPosition()),
                     defaultIfBlank(defaultEconomicSector, "Sector minero y energetico"),
-                    defaultIfBlank(defaultCompany, "Empresa de Energia de Boyaca"),
+                    defaultIfBlank(defaultCompany, "Empresa de energia de Boyaca"),
                     defaultIfBlank(defaultArl, "Axa colpatria seguros de vida"));
 
             csv.append(columns.stream()
@@ -316,7 +321,7 @@ public class ReportService {
             return null;
         }
 
-        return new MinistryCsvRow(employee, document, analysis);
+        return new MinistryCsvRow(employee, document, analysis, conceptDate);
     }
 
     private List<AptitudeReportRow> buildAptitudeRows(Map<String, String> filters) {
@@ -379,17 +384,15 @@ public class ReportService {
             continue;
         }
 
-                LocalDate uploadedDate = document.getUploadedAt() != null ? document.getUploadedAt().toLocalDate() : null;
-
-                if ((from != null || to != null) && uploadedDate == null) {
+                if ((from != null || to != null) && conceptDate == null) {
                     continue;
                 }
 
-                if (from != null && uploadedDate.isBefore(from)) {
+                if (from != null && conceptDate.isBefore(from)) {
                     continue;
                 }
 
-                if (to != null && uploadedDate.isAfter(to)) {
+                if (to != null && conceptDate.isAfter(to)) {
                     continue;
                 }
 
@@ -407,7 +410,7 @@ public class ReportService {
                         cargo,
                         resolveAreaLabel(employee),
                         resultLabel(resultStatus),
-                        uploadedDate != null ? uploadedDate : conceptDate));
+                        conceptDate));
             }
 
             employeeRows.sort(
@@ -485,23 +488,6 @@ public class ReportService {
         return true;
     }
 
-    private boolean matchesUploadDate(ManagedDocument document, LocalDate from, LocalDate to) {
-        if (from == null && to == null) {
-            return true;
-        }
-
-        if (document == null || document.getUploadedAt() == null) {
-            return false;
-        }
-
-        LocalDate uploadedDate = document.getUploadedAt().toLocalDate();
-
-        if (from != null && uploadedDate.isBefore(from)) {
-            return false;
-        }
-
-        return to == null || !uploadedDate.isAfter(to);
-    }
 
     private LocalDate resolveConceptDate(ManagedDocument document, DocumentAnalysis analysis) {
         if (document != null && document.getFechaConcepto() != null) {
@@ -855,7 +841,8 @@ public class ReportService {
     private record MinistryCsvRow(
             Employee employee,
             ManagedDocument document,
-            DocumentAnalysis analysis) {
+            DocumentAnalysis analysis,
+            LocalDate conceptDateSafe) {
 
         private LocalDateTime uploadedAtSafe() {
             return document != null ? document.getUploadedAt() : null;

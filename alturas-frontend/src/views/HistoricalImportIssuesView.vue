@@ -14,15 +14,19 @@ const issues = ref([])
 const search = ref('')
 const currentPage = ref(1)
 const pageSize = ref(20)
+const currentTab = ref('REGULAR')
 
 const normalize = (value) => String(value || '').toLowerCase().trim()
 
 const filteredIssues = computed(() => {
   const term = normalize(search.value)
 
-  if (!term) return issues.value
-
   return issues.value.filter((issue) => {
+    const issueTab = issue.uploadType || 'REGULAR'
+    if (issueTab !== currentTab.value) return false
+
+    if (!term) return true
+
     const haystack = [
       issue.fileName,
       issue.documentNumber,
@@ -196,6 +200,11 @@ watch(search, () => {
   currentPage.value = 1
 })
 
+watch(currentTab, () => {
+  currentPage.value = 1
+  search.value = ''
+})
+
 watch(pageSize, () => {
   currentPage.value = 1
 })
@@ -205,10 +214,10 @@ watch(pageSize, () => {
   <section class="page">
     <div class="dashboard-toolbar">
       <div>
-        <span class="mini-title">Carga historica</span>
+        <span class="mini-title">Carga historica y masiva</span>
         <h1 class="h1 mb-2">PDFs no asociados</h1>
         <p class="p mb-0">
-          Archivos historicos que no se pudieron guardar porque no se encontro trabajador o no se pudo leer la cedula.
+          Archivos que no se pudieron guardar porque no se encontró trabajador o no se pudo leer la cédula.
         </p>
       </div>
 
@@ -248,6 +257,37 @@ watch(pageSize, () => {
           <span class="status-pill-warning">
             {{ filteredIssues.length }} pendiente{{ filteredIssues.length === 1 ? '' : 's' }}
           </span>
+        </div>
+
+        <div class="hr mt-0 mb-3"></div>
+
+        <div class="history-section-tabs mb-4">
+          <button
+            type="button"
+            class="section-tab"
+            :class="{ active: currentTab === 'REGULAR' }"
+            @click="currentTab = 'REGULAR'"
+          >
+            Evaluaciones
+          </button>
+          
+          <button
+            type="button"
+            class="section-tab"
+            :class="{ active: currentTab === 'HISTORICAL' }"
+            @click="currentTab = 'HISTORICAL'"
+          >
+            Historial
+          </button>
+          
+          <button
+            type="button"
+            class="section-tab"
+            :class="{ active: currentTab === 'CONSTANCIA' }"
+            @click="currentTab = 'CONSTANCIA'"
+          >
+            Constancias
+          </button>
         </div>
 
         <div class="hr"></div>
@@ -480,5 +520,34 @@ watch(pageSize, () => {
   justify-content: center;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.history-section-tabs {
+  display: inline-flex;
+  gap: 0.4rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.section-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 34px;
+  padding: 0.42rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.section-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
 </style>

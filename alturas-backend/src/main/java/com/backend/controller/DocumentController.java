@@ -93,13 +93,16 @@ public class DocumentController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "documentType", defaultValue = "CONCEPTO_MEDICO") String documentType,
             @RequestParam(value = "examType", defaultValue = "TRABAJO_EN_ALTURAS") String examType,
-            @RequestParam(value = "historical", defaultValue = "false") boolean historical,
+            @RequestParam(value = "uploadType", defaultValue = "REGULAR") String uploadType,
             Authentication authentication) {
         if (files == null || files.isEmpty()) {
             throw new IllegalArgumentException("Debes adjuntar al menos un archivo PDF.");
         }
 
-        if (!historical && files.size() > MAX_BATCH_FILES) {
+        boolean historical = "HISTORICAL".equals(uploadType);
+        boolean isConstancia = "CONSTANCIA".equals(uploadType);
+
+        if (!historical && !isConstancia && files.size() > MAX_BATCH_FILES) {
             throw new IllegalArgumentException("La carga normal analiza cada PDF. El limite seguro es "
                     + MAX_BATCH_FILES
                     + " PDFs por tanda. La app debe dividir la carpeta automaticamente; si ves este mensaje, vuelve a intentar con menos archivos.");
@@ -107,7 +110,7 @@ public class DocumentController {
 
         long totalBytes = files.stream().mapToLong(file -> file != null ? file.getSize() : 0L).sum();
 
-        if (!historical && totalBytes > MAX_BATCH_BYTES) {
+        if (!historical && !isConstancia && totalBytes > MAX_BATCH_BYTES) {
             throw new IllegalArgumentException(
                     "La carga normal supera el tamano seguro por tanda. La app debe dividir la carpeta automaticamente; si ves este mensaje, intenta con menos PDFs o archivos mas livianos.");
         }
@@ -119,7 +122,7 @@ public class DocumentController {
                 documentType,
                 examType,
                 uploadedBy,
-                historical);
+                uploadType);
 
         return ResponseEntity.ok(response);
     }
