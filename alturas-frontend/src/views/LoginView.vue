@@ -12,13 +12,8 @@
           <div class="login-brand-logo-container">
             <img
               src="/logofinalblanco.png"
-              alt="Alturas"
-              class="login-brand-logo light-theme-logo"
-            />
-            <img
-              src="/logofinaloscuro.png"
-              alt="Alturas"
-              class="login-brand-logo dark-theme-logo"
+              alt="Logo SST Alturas"
+              class="login-brand-logo"
             />
           </div>
 

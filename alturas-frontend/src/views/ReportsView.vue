@@ -360,8 +360,8 @@ const initialCsvFilters = () => ({
   areaCode: '',
   position: '',
   resultStatus: 'APTO',
-  from: firstDayOfCurrentMonth(),
-  to: todayIsoDate()
+  from: '',
+  to: ''
 })
 
 const excelFilters = reactive(initialExcelFilters())

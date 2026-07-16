@@ -263,7 +263,7 @@ public class ReportService {
                     defaultIfBlank(defaultCountry, "COLOMBIA"),
                     formatCsvDate(employee.getBirthDate()),
                     safe(employee.getEducationalLevel()),
-                    "", // Distribución por defecto vacía
+                    defaultIfBlank(defaultProcess, "Proceso de distribucion"), // Distribución por defecto
                     safe(employee.getWorkArea()),
                     safe(employee.getCurrentPosition()),
                     defaultIfBlank(defaultEconomicSector, "Sector minero y energetico"),
@@ -346,9 +346,13 @@ public class ReportService {
                     .stream()
                     .filter(doc -> {
                         String rs = safe(doc.getReviewStatus());
-                        return "APPROVED".equals(rs);
+                        return "APPROVED".equals(rs) || doc.isHistorical();
                     })
                     .toList();
+
+            if (historyMode) {
+                documents = documents.stream().filter(ManagedDocument::isHistorical).toList();
+            }
 
             if (documents.isEmpty()) {
                 continue;

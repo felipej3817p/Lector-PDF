@@ -215,15 +215,18 @@ public class DocumentBatchService {
         try {
             validateFile(file);
 
+            Map<String, Object> extractedFields = extractIdentityFields(file);
+            documentNumber = normalizeDocumentNumber(extractedFields.getOrDefault("documentNumber", ""));
+            patientName = safe(String.valueOf(extractedFields.getOrDefault("patientName", "")));
+
             if (isConstancia) {
-                String originalFilename = file != null ? file.getOriginalFilename() : "";
-                if (originalFilename != null) {
-                    documentNumber = originalFilename.replaceAll("(?i)\\.pdf$", "").replaceAll("[^0-9]", "");
+                if (documentNumber.isBlank()) {
+                    String originalFilename = file != null ? file.getOriginalFilename() : "";
+                    if (originalFilename != null) {
+                        documentNumber = originalFilename.replaceAll("(?i)\\.pdf$", "").replaceAll("[^0-9]", "");
+                    }
                 }
             } else {
-                Map<String, Object> extractedFields = extractIdentityFields(file);
-                documentNumber = normalizeDocumentNumber(extractedFields.getOrDefault("documentNumber", ""));
-                patientName = safe(String.valueOf(extractedFields.getOrDefault("patientName", "")));
                 birthDate = safe(String.valueOf(extractedFields.getOrDefault("birthDate", "")));
                 fechaConcepto = resolveFechaConcepto(extractedFields);
             }

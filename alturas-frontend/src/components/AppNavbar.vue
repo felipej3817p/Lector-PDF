@@ -5,13 +5,8 @@
         <div class="sidebar-brand__logo-container">
           <img
             src="/logofinalblanco.png"
-            alt="Alturas"
-            class="sidebar-brand__logo light-theme-logo"
-          />
-          <img
-            src="/logofinaloscuro.png"
-            alt="Alturas"
-            class="sidebar-brand__logo dark-theme-logo"
+            alt="Logo SST Alturas"
+            class="sidebar-brand__logo"
           />
         </div>
 

@@ -13,10 +13,20 @@
         <button
           type="button"
           class="secondary-btn"
-          :disabled="loading"
+          :disabled="loading || globalAnalyzing"
           @click="loadData"
         >
           {{ loading ? 'Actualizando...' : 'Actualizar' }}
+        </button>
+
+        <button
+          v-if="auth.canUploadDocuments && !isViewerOnly"
+          type="button"
+          class="secondary-btn"
+          :disabled="globalAnalyzing"
+          @click="analyzeAllGlobal"
+        >
+          {{ globalAnalyzing ? globalAnalyzeProgress : 'Reevaluar todos (Global)' }}
         </button>
 
         <RouterLink
@@ -876,7 +886,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { getEmployees } from '../api/employee'
-import { getDocuments } from '../api/document'
+import { getDocuments, analyzeDocument } from '../api/document'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import {
@@ -945,6 +955,9 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000
 const loading = ref(false)
 const error = ref('')
 
+const globalAnalyzing = ref(false)
+const globalAnalyzeProgress = ref('')
+
 const search = ref(sessionStorage.getItem('emp_search') || '')
 const areaFilter = ref(sessionStorage.getItem('emp_area') || '')
 const subzoneFilter = ref(sessionStorage.getItem('emp_subzone') || '')
@@ -959,6 +972,53 @@ const pageSize = ref(Number(sessionStorage.getItem('emp_size')) || 15)
 const currentPage = ref(Number(sessionStorage.getItem('emp_page')) || 1)
 
 const isInitializing = ref(true)
+
+const analyzeAllGlobal = async () => {
+  if (isViewerOnly.value || !auth.canUploadDocuments) return
+
+  const confirmed = window.confirm(
+    '¿Seguro que deseas reevaluar TODOS los PDFs del sistema?\n\n' +
+    'Esto procesará los documentos de todos los trabajadores uno por uno y puede tomar varios minutos. Por favor no cierres la pestaña.'
+  )
+  if (!confirmed) return
+
+  globalAnalyzing.value = true
+  globalAnalyzeProgress.value = 'Iniciando...'
+  error.value = ''
+
+  try {
+    const { data: allDocs } = await getDocuments({ historical: true })
+    const docsWithId = (allDocs || []).filter(d => d.id)
+
+    if (!docsWithId.length) {
+      globalAnalyzing.value = false
+      alert('No hay documentos en el sistema para reevaluar.')
+      return
+    }
+
+    for (let i = 0; i < docsWithId.length; i++) {
+      globalAnalyzeProgress.value = `Reevaluando... (${i + 1}/${docsWithId.length})`
+      try {
+        await analyzeDocument(docsWithId[i].id)
+      } catch (err) {
+        console.warn(`Error al reevaluar el documento ${docsWithId[i].id}:`, err)
+      }
+    }
+
+    globalAnalyzeProgress.value = '¡Completado!'
+    setTimeout(() => {
+      globalAnalyzing.value = false
+    }, 2000)
+
+    // Es importante asegurarse de que loadData está definido o recargar los empleados
+    if (typeof loadData === 'function') {
+      await loadData()
+    }
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'Ocurrió un error al cargar o reevaluar los documentos globales.'
+    globalAnalyzing.value = false
+  }
+}
 
 watch(currentPage, (val) => sessionStorage.setItem('emp_page', val))
 watch(pageSize, (val) => sessionStorage.setItem('emp_size', val))

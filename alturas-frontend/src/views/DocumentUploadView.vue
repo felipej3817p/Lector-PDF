@@ -368,8 +368,8 @@
               <tr>
                 <th>Archivo</th>
                 <th>Estado</th>
-                <th v-if="!constanciasMode">Trabajador</th>
-                <th v-if="!constanciasMode">Cédula</th>
+                <th>Trabajador</th>
+                <th>Cédula</th>
                   <th v-if="!batchSummary?.historical && !constanciasMode">Fecha evaluacion</th>
                   <th v-if="!batchSummary?.historical && !constanciasMode">Fecha nacimiento</th>
                   <th v-if="!batchSummary?.historical && !constanciasMode">Resultado</th>
@@ -398,11 +398,11 @@
                   </span>
                 </td>
 
-                <td v-if="!constanciasMode">
+                <td>
                   <strong>{{ item.employeeName || '-' }}</strong>
                 </td>
 
-                <td v-if="!constanciasMode">
+                <td>
                   {{ item.employeeDocument || '-' }}
                 </td>
 

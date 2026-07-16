@@ -172,15 +172,6 @@
             <button type="button" class="secondary-btn filter-clear-btn" @click="clearEvalFilters">
               Limpiar
             </button>
-            <button
-              v-if="canAnalyzeHistoricalResult && evaluations.length > 0"
-              type="button"
-              class="primary-btn"
-              @click="analyzeAllHistorical"
-              :disabled="loading"
-            >
-              Reevaluar todos
-            </button>
           </div>
 
           <div class="compact-divider"></div>
@@ -273,11 +264,11 @@
                           </button>
 
                           <button
-                            v-if="canAnalyzeHistoricalResult && item.historical"
+                            v-if="canAnalyzeHistoricalResult"
                             type="button"
                             @click="analyzeHistoricalResult(item)"
                           >
-                            Evaluar resultado
+                            Reevaluar documento
                           </button>
 
                           <button
@@ -959,32 +950,6 @@ const analyzeHistoricalResult = async (item) => {
     await loadDocuments()
   } catch (err) {
     error.value = err?.response?.data?.message || 'No se pudo evaluar el resultado de este PDF.'
-  }
-}
-
-const analyzeAllHistorical = async () => {
-  if (!canAnalyzeHistoricalResult.value) return
-
-  const itemsToAnalyze = evaluations.value
-  if (!itemsToAnalyze.length) return
-
-  const confirmed = window.confirm(`¿Seguro que deseas reevaluar los ${itemsToAnalyze.length} PDFs (tanto de historial como evaluaciones recientes)? Esto puede tomar un momento.`)
-  if (!confirmed) return
-
-  loading.value = true
-  error.value = ''
-
-  try {
-    for (const item of itemsToAnalyze) {
-      if (item?.id) {
-        await analyzeDocument(item.id)
-      }
-    }
-    await loadDocuments()
-  } catch (err) {
-    error.value = err?.response?.data?.message || 'Ocurrió un error al reevaluar los PDFs.'
-  } finally {
-    loading.value = false
   }
 }
 
