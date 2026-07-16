@@ -46,10 +46,10 @@ public class ReportService {
     @Value("${app.reports.ministry.default-company:Empresa de energia de Boyaca}")
     private String defaultCompany;
 
-    @Value("${app.reports.ministry.default-arl:Axa colpatria seguros de vida}")
+    @Value("${app.reports.ministry.default-arl:Axa colpatria}")
     private String defaultArl;
 
-    @Value("${app.reports.ministry.default-process:Proceso de distribucion}")
+    @Value("${app.reports.ministry.default-process:Distribucion}")
     private String defaultProcess;
 
     public ReportService(
@@ -213,26 +213,31 @@ public class ReportService {
     public byte[] generateMinistryCsv(Map<String, String> filters) {
         String filterValue = filters.get("resultStatus");
         String resultStatusFilter = normalizeResultStatus(filterValue);
-        
+
         LocalDate uploadedFrom = parseDate(firstNonBlank(filters.get("uploadedFrom"), filters.get("from")));
         LocalDate uploadedTo = parseDate(firstNonBlank(filters.get("uploadedTo"), filters.get("to")));
 
         List<MinistryCsvRow> rows = getAccessibleEmployees().stream()
                 .map(employee -> {
-                    List<ManagedDocument> docs = managedDocumentRepository.findByEmployeeIdOrderByUploadedAtDesc(employee.getId())
+                    List<ManagedDocument> docs = managedDocumentRepository
+                            .findByEmployeeIdOrderByUploadedAtDesc(employee.getId())
                             .stream()
                             .filter(doc -> {
                                 String rs = safe(doc.getReviewStatus());
-                                return "APPROVED".equals(rs);
+                                return "APPROVED".equalsIgnoreCase(rs) && !doc.isHistorical();
                             })
                             .toList();
-                    if (docs.isEmpty()) return null;
+                    if (docs.isEmpty())
+                        return null;
                     ManagedDocument latestDocument = docs.get(0);
                     MinistryCsvRow row = toMinistryCsvRowOrNull(latestDocument, filters, resultStatusFilter);
-                    if (row == null) return null;
+                    if (row == null)
+                        return null;
                     LocalDate conceptDate = row.conceptDateSafe();
-                    if (uploadedFrom != null && (conceptDate == null || conceptDate.isBefore(uploadedFrom))) return null;
-                    if (uploadedTo != null && (conceptDate == null || conceptDate.isAfter(uploadedTo))) return null;
+                    if (uploadedFrom != null && (conceptDate == null || conceptDate.isBefore(uploadedFrom)))
+                        return null;
+                    if (uploadedTo != null && (conceptDate == null || conceptDate.isAfter(uploadedTo)))
+                        return null;
                     return row;
                 })
                 .filter(Objects::nonNull)
@@ -263,8 +268,8 @@ public class ReportService {
                     defaultIfBlank(defaultCountry, "COLOMBIA"),
                     formatCsvDate(employee.getBirthDate()),
                     safe(employee.getEducationalLevel()),
-                    defaultIfBlank(defaultProcess, "Proceso de distribucion"), // Distribución por defecto
-                    safe(employee.getWorkArea()),
+                    defaultIfBlank(defaultProcess, "Distribucion"), // Distribución por defecto
+                    resolveAreaLabel(employee),
                     safe(employee.getCurrentPosition()),
                     defaultIfBlank(defaultEconomicSector, "Sector minero y energetico"),
                     defaultIfBlank(defaultCompany, "Empresa de energia de Boyaca"),
@@ -311,7 +316,8 @@ public class ReportService {
             if (!documentResultStatus.equals(resultStatusFilter)) {
                 return null;
             }
-        } else if (!"APTO".equals(documentResultStatus) && !"NO_APTO".equals(documentResultStatus) && !"VIGENCIA_VENCIDA".equals(documentResultStatus)) {
+        } else if (!"APTO".equals(documentResultStatus) && !"NO_APTO".equals(documentResultStatus)
+                && !"VIGENCIA_VENCIDA".equals(documentResultStatus)) {
             return null;
         }
 
@@ -330,7 +336,7 @@ public class ReportService {
 
         String filterValue = filters.get("resultStatus");
         String resultStatusFilter = normalizeResultStatus(filterValue);
-        
+
         LocalDate from = parseDate(filters.get("from"));
         LocalDate to = parseDate(filters.get("to"));
 
@@ -345,14 +351,14 @@ public class ReportService {
                     .findByEmployeeIdOrderByUploadedAtDesc(employee.getId())
                     .stream()
                     .filter(doc -> {
-                        String rs = safe(doc.getReviewStatus());
-                        return "APPROVED".equals(rs) || doc.isHistorical();
+                        if (historyMode) {
+                            return doc.isHistorical();
+                        } else {
+                            String rs = safe(doc.getReviewStatus());
+                            return "APPROVED".equalsIgnoreCase(rs) && !doc.isHistorical();
+                        }
                     })
                     .toList();
-
-            if (historyMode) {
-                documents = documents.stream().filter(ManagedDocument::isHistorical).toList();
-            }
 
             if (documents.isEmpty()) {
                 continue;
@@ -373,20 +379,21 @@ public class ReportService {
                 }
 
                 DocumentAnalysis analysis = analysisOptional.get();
-        String resultStatus = normalizeResultStatus(analysis.getResultStatus());
-        LocalDate conceptDate = resolveConceptDate(document, analysis);
+                String resultStatus = normalizeResultStatus(analysis.getResultStatus());
+                LocalDate conceptDate = resolveConceptDate(document, analysis);
 
-        if (isExpired(conceptDate)) {
-            resultStatus = "VIGENCIA_VENCIDA";
-        }
+                if (isExpired(conceptDate)) {
+                    resultStatus = "VIGENCIA_VENCIDA";
+                }
 
-        if (!resultStatusFilter.isBlank()) {
-            if (!resultStatus.equals(resultStatusFilter)) {
-                continue;
-            }
-        } else if (!"APTO".equals(resultStatus) && !"NO_APTO".equals(resultStatus) && !"VIGENCIA_VENCIDA".equals(resultStatus)) {
-            continue;
-        }
+                if (!resultStatusFilter.isBlank()) {
+                    if (!resultStatus.equals(resultStatusFilter)) {
+                        continue;
+                    }
+                } else if (!"APTO".equals(resultStatus) && !"NO_APTO".equals(resultStatus)
+                        && !"VIGENCIA_VENCIDA".equals(resultStatus)) {
+                    continue;
+                }
 
                 if ((from != null || to != null) && conceptDate == null) {
                     continue;
@@ -403,9 +410,8 @@ public class ReportService {
                 String cargo = safe(employee.getCurrentPosition());
                 if (cargo.isBlank() && analysis.getExtractedFields() != null) {
                     cargo = firstNonBlank(
-                        String.valueOf(analysis.getExtractedFields().getOrDefault("position", "")),
-                        String.valueOf(analysis.getExtractedFields().getOrDefault("cargo", ""))
-                    );
+                            String.valueOf(analysis.getExtractedFields().getOrDefault("position", "")),
+                            String.valueOf(analysis.getExtractedFields().getOrDefault("cargo", "")));
                 }
 
                 employeeRows.add(new AptitudeReportRow(
@@ -455,8 +461,6 @@ public class ReportService {
         return employeeRepository.findByAreaCodeIn(allowedAreas);
     }
 
-
-
     private boolean matchesEmployeeFilters(Employee employee, Map<String, String> filters) {
         String documentNumber = safe(filters.get("documentNumber"));
 
@@ -491,7 +495,6 @@ public class ReportService {
 
         return true;
     }
-
 
     private LocalDate resolveConceptDate(ManagedDocument document, DocumentAnalysis analysis) {
         if (document != null && document.getFechaConcepto() != null) {
@@ -788,7 +791,6 @@ public class ReportService {
 
         return style;
     }
-
 
     private CellStyle buildBodyStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
