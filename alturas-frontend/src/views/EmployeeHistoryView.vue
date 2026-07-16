@@ -38,7 +38,7 @@
               <p class="helper-text mb-0">
                 {{ employeeDocumentLabel }}
                 <span v-if="employeePosition"> · {{ employeePosition }}</span>
-                <span v-if="employeeZone"> · {{ employeeZone }}</span>
+                <span v-if="employeeAreaCode"> · {{ employeeAreaCode }}</span>
               </p>
             </div>
 
@@ -172,6 +172,15 @@
             <button type="button" class="secondary-btn filter-clear-btn" @click="clearEvalFilters">
               Limpiar
             </button>
+            <button
+              v-if="canAnalyzeHistoricalResult && evaluations.length > 0"
+              type="button"
+              class="primary-btn"
+              @click="analyzeAllHistorical"
+              :disabled="loading"
+            >
+              Reevaluar todos
+            </button>
           </div>
 
           <div class="compact-divider"></div>
@@ -264,7 +273,7 @@
                           </button>
 
                           <button
-                            v-if="canAnalyzeHistoricalResult && item.historical && item.resultStatus === 'PENDIENTE'"
+                            v-if="canAnalyzeHistoricalResult && item.historical"
                             type="button"
                             @click="analyzeHistoricalResult(item)"
                           >
@@ -579,7 +588,6 @@ const employeePosition = computed(() => employee.value?.currentPosition || '')
 const employeeAreaCode = computed(() => employee.value?.areaCode || '')
 const employeeEducationalLevel = computed(() => employee.value?.educationalLevel || '')
 const employeeActive = computed(() => employee.value?.active ?? true)
-const employeeCurrentlyActive = computed(() => employee.value?.currentlyActive ?? true)
 
 const resolveEvaluationDate = (document, analysis = {}) => {
   const fields = analysis.extractedFields || {}
@@ -951,6 +959,32 @@ const analyzeHistoricalResult = async (item) => {
     await loadDocuments()
   } catch (err) {
     error.value = err?.response?.data?.message || 'No se pudo evaluar el resultado de este PDF.'
+  }
+}
+
+const analyzeAllHistorical = async () => {
+  if (!canAnalyzeHistoricalResult.value) return
+
+  const itemsToAnalyze = evaluations.value
+  if (!itemsToAnalyze.length) return
+
+  const confirmed = window.confirm(`¿Seguro que deseas reevaluar los ${itemsToAnalyze.length} PDFs (tanto de historial como evaluaciones recientes)? Esto puede tomar un momento.`)
+  if (!confirmed) return
+
+  loading.value = true
+  error.value = ''
+
+  try {
+    for (const item of itemsToAnalyze) {
+      if (item?.id) {
+        await analyzeDocument(item.id)
+      }
+    }
+    await loadDocuments()
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'Ocurrió un error al reevaluar los PDFs.'
+  } finally {
+    loading.value = false
   }
 }
 
