@@ -146,7 +146,6 @@ public class ApprovedExportService {
                 "funcionario",
                 "identificacion",
                 "cargo",
-                "area_dependencia",
                 "zona",
                 "area_codigo",
                 "resultado",
@@ -168,8 +167,6 @@ public class ApprovedExportService {
               .append(csv(row.documentNumber))
               .append(",")
               .append(csv(row.position))
-              .append(",")
-              .append(csv(row.workArea))
               .append(",")
               .append(csv(row.zone))
               .append(",")

@@ -493,6 +493,14 @@ public class ReportService {
             return false;
         }
 
+        String enabled = safe(filters.get("enabled"));
+        if (!enabled.isBlank()) {
+            boolean isEnabled = Boolean.parseBoolean(enabled);
+            if (employee.isActive() != isEnabled) {
+                return false;
+            }
+        }
+
         return true;
     }
 

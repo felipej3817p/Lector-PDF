@@ -180,7 +180,6 @@ public class ConsolidatedExportService {
                 "funcionario",
                 "identificacion",
                 "cargo",
-                "area_dependencia",
                 "zona",
                 "correo",
                 "empleador",
@@ -213,8 +212,6 @@ public class ConsolidatedExportService {
               .append(csv(row.documentNumber))
               .append(",")
               .append(csv(row.position))
-              .append(",")
-              .append(csv(row.workArea))
               .append(",")
               .append(csv(row.zone))
               .append(",")

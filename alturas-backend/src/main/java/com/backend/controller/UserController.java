@@ -54,6 +54,12 @@ public class UserController {
         return ResponseEntity.ok(userService.updateEnabled(id, request.isEnabled()));
     }
 
+    @PostMapping("/{id}/reset-password-temp")
+    public ResponseEntity<java.util.Map<String, String>> resetPasswordTemp(@PathVariable String id) {
+        String tempPassword = userService.resetPasswordTemp(id);
+        return ResponseEntity.ok(java.util.Map.of("tempPassword", tempPassword));
+    }
+
     @GetMapping("/{id}/audit-logs")
     public ResponseEntity<Page<UserAuditLog>> getAuditLogs(
             @PathVariable String id,

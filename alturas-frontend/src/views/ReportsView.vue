@@ -81,13 +81,23 @@
             <div class="form-field">
               <label class="label" for="excelResult">Resultado</label>
               <select id="excelResult" v-model="excelFilters.resultStatus" class="form-select">
-                <option value="">APTO y NO APTO</option>
+                <option value="">Todos</option>
                 <option value="APTO">APTO</option>
                 <option value="NO_APTO">NO APTO</option>
+                <option value="VIGENCIA_VENCIDA">VENCIDOS</option>
               </select>
             </div>
 
-                        <div class="form-field">
+            <div class="form-field">
+              <label class="label" for="excelEnabled">Estado de trabajador</label>
+              <select id="excelEnabled" v-model="excelFilters.enabled" class="form-select">
+                <option value="">Todos</option>
+                <option value="true">ACTIVO</option>
+                <option value="false">INACTIVO</option>
+              </select>
+            </div>
+
+            <div class="form-field">
               <label class="label" for="excelPosition">Cargo</label>
               <input
                 id="excelPosition"
@@ -221,6 +231,15 @@
             </div>
 
             <div class="form-field">
+              <label class="label" for="csvEnabled">Estado de trabajador</label>
+              <select id="csvEnabled" v-model="csvFilters.enabled" class="form-select">
+                <option value="">Todos</option>
+                <option value="true">ACTIVO</option>
+                <option value="false">INACTIVO</option>
+              </select>
+            </div>
+
+            <div class="form-field">
               <label class="label" for="csvFrom">Fecha de evaluación (Desde)</label>
               <input
                 id="csvFrom"
@@ -245,7 +264,7 @@
           <div class="csv-format-box">
             <span class="label">Formato de salida</span>
             <code>
-              CC;Número documento;Primer nombre;Segundo nombre;Primer apellido;Segundo apellido;Sexo;País;Fecha nacimiento;Nivel educativo;Distribución;Área;Cargo;Sector;Empresa;ARL
+              CC;Número documento;Primer nombre;Segundo nombre;Primer apellido;Segundo apellido;Sexo;País;Fecha nacimiento;Nivel educativo;Distribución;Cargo;Sector;Empresa;ARL
             </code>
           </div>
 
@@ -339,6 +358,7 @@ const initialExcelFilters = () => ({
   name: '',
   areaCode: '',
   resultStatus: 'APTO',
+  enabled: '',
   position: '',
   from: '',
   to: ''
@@ -360,6 +380,7 @@ const initialCsvFilters = () => ({
   areaCode: '',
   position: '',
   resultStatus: 'APTO',
+  enabled: '',
   from: '',
   to: ''
 })

@@ -59,4 +59,16 @@ public class AuthController {
                 "Contraseña actualizada correctamente."
         ));
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @Valid @RequestBody com.backend.dto.auth.ChangePasswordRequest request,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        authService.changePassword(authentication.getName(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of(
+                "message",
+                "Contraseña actualizada correctamente."
+        ));
+    }
 }

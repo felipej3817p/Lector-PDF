@@ -456,6 +456,7 @@
                   <th>Áreas</th>
                   <th>Estado</th>
                   <th>Vigencia</th>
+                  <th>Último Acceso</th>
                   <th class="text-center">Acciones</th>
                 </tr>
               </thead>
@@ -472,13 +473,25 @@
                     <span v-else>{{ normalizeAreaList(user.allowedAreas || []).map(areaLabel).join(', ') || '-' }}</span>
                   </td>
                   <td>
+                  </td>
+                  <td>
                     <span :class="user.enabled ? 'status-pill-active' : 'status-pill-inactive'">
                       {{ user.enabled ? 'ACTIVO' : 'INACTIVO' }}
                     </span>
                   </td>
                   <td>{{ formatDateTime(user.accountExpirationDate) }}</td>
+                  <td>{{ formatDateTime(user.lastLoginAt) }}</td>
                   <td>
                     <div class="actions justify-content-center">
+                      <button
+                        type="button"
+                        class="secondary-btn"
+                        title="Restablecer contraseña temporal"
+                        @click="resetPasswordTemp(user.id)"
+                      >
+                        🔑
+                      </button>
+
                       <button
                         type="button"
                         class="secondary-btn"
@@ -770,6 +783,14 @@ const saveUser = async () => {
       await http.put(`/api/users/${editingId.value}`, payload)
     }
 
+    }
+
+    if (!editingId.value) {
+      await http.post('/api/users', payload)
+    } else {
+      await http.put(`/api/users/${editingId.value}`, payload)
+    }
+
     await loadUsers()
     closeForm()
   } catch (e) {
@@ -793,6 +814,17 @@ const deleteUser = async (id) => {
     error.value = e?.response?.data?.message || 'No se pudo eliminar el usuario.'
   } finally {
     deletingId.value = ''
+  }
+}
+
+const resetPasswordTemp = async (id) => {
+  if (!confirm('¿Seguro que deseas restablecer la contraseña a un valor temporal?')) return
+
+  try {
+    const { data } = await http.post(`/api/users/${id}/reset-password-temp`)
+    alert(`Contraseña restablecida exitosamente.\n\nNueva contraseña temporal: ${data.tempPassword}\n\nPor favor, entrega esta contraseña al usuario. El sistema le pedirá cambiarla al ingresar.`)
+  } catch (err) {
+    alert(err.response?.data?.message || 'Error al restablecer la contraseña.')
   }
 }
 

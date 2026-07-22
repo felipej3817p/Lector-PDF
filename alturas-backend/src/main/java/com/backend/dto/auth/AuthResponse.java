@@ -14,6 +14,8 @@ public class AuthResponse {
     private Set<Role> roles = new HashSet<>();
     private Set<AreaCode> allowedAreas = new HashSet<>();
     private boolean globalAreaAccess;
+    private java.time.LocalDateTime lastLoginAt;
+    private boolean mustChangePassword;
 
     public AuthResponse() {
     }
@@ -24,7 +26,9 @@ public class AuthResponse {
             String email,
             Set<Role> roles,
             Set<AreaCode> allowedAreas,
-            boolean globalAreaAccess
+            boolean globalAreaAccess,
+            java.time.LocalDateTime lastLoginAt,
+            boolean mustChangePassword
     ) {
         this.token = token;
         this.username = username;
@@ -32,6 +36,8 @@ public class AuthResponse {
         this.roles = roles;
         this.allowedAreas = allowedAreas;
         this.globalAreaAccess = globalAreaAccess;
+        this.lastLoginAt = lastLoginAt;
+        this.mustChangePassword = mustChangePassword;
     }
 
     public String getToken() {
@@ -80,5 +86,21 @@ public class AuthResponse {
 
     public void setGlobalAreaAccess(boolean globalAreaAccess) {
         this.globalAreaAccess = globalAreaAccess;
+    }
+
+    public java.time.LocalDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(java.time.LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }
