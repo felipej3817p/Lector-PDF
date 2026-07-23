@@ -7,6 +7,9 @@ import {
   getHistoricalImportIssues,
   viewHistoricalImportIssuePdf
 } from '../api/document'
+import { useUIStore } from '../stores/ui'
+
+const ui = useUIStore()
 
 const loading = ref(false)
 const error = ref('')
@@ -150,7 +153,12 @@ const removeIssue = async (issue) => {
   if (!issue?.id) return
 
   const fileName = issue.fileName || 'este registro'
-  const confirmed = window.confirm(`Seguro que deseas eliminar "${fileName}" de PDFs no asociados?`)
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar registro',
+    message: `¿Seguro que deseas eliminar "${fileName}" de PDFs no asociados?`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
 
   if (!confirmed) return
 
@@ -174,14 +182,23 @@ const viewIssuePdf = async (issue) => {
     window.open(url, '_blank')
     setTimeout(() => URL.revokeObjectURL(url), 60000)
   } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo abrir el PDF no asociado.'
+    ui.showAlert({
+      title: 'Error',
+      message: err?.response?.data?.message || 'No se pudo abrir el PDF no asociado.',
+      type: 'error'
+    })
   }
 }
 
 const removeAllIssues = async () => {
   if (!issues.value.length) return
 
-  const confirmed = window.confirm('Seguro que deseas eliminar todos los PDFs no asociados?')
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar todos',
+    message: '¿Seguro que deseas eliminar todos los PDFs no asociados?',
+    confirmText: 'Sí, eliminar todos',
+    type: 'danger'
+  })
 
   if (!confirmed) return
 

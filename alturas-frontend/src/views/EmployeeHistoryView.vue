@@ -451,9 +451,11 @@ import { getEmployeeHistory } from '../api/employeeHistory'
 import http from '../api/http'
 import TrainingCertificatesPanel from '../components/TrainingCertificatesPanel.vue'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 
 const route = useRoute()
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const loading = ref(false)
 const error = ref('')
@@ -956,7 +958,12 @@ const analyzeHistoricalResult = async (item) => {
 const deleteEvaluationDocument = async (item) => {
   if (!(auth.isAdmin || auth.isSuperAdmin || auth.isOperator) || !item?.id) return
 
-  const confirmed = window.confirm(`Seguro que deseas eliminar el PDF ${item.originalFileName || ''}? Esta accion borra el soporte y su analisis.`)
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar evaluación',
+    message: `¿Seguro que deseas eliminar el PDF ${item.originalFileName || ''}? Esta accion borra el soporte y su analisis.`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
   if (!confirmed) return
 
   try {

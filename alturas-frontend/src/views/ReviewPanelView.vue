@@ -781,7 +781,10 @@ import { RouterLink } from 'vue-router'
 import { getDocuments, approveBulkDocuments, rejectBulkDocuments } from '../api/document'
 import { getEmployees } from '../api/employee'
 import http from '../api/http'
+import { useUIStore } from '../stores/ui'
 import { AREA_OPTIONS, areaLabel, normalizeAreaCode } from '../utils/areaCatalog'
+
+const ui = useUIStore()
 
 const documents = ref([])
 const employees = ref([])
@@ -1388,7 +1391,11 @@ const viewPdf = async (documentId) => {
   } catch (err) {
     if (pdfWindow) pdfWindow.close()
     console.error('Error abriendo PDF:', err)
-    alert('No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.')
+    ui.showAlert({
+      title: 'Error',
+      message: 'No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.',
+      type: 'error'
+    })
   }
 }
 

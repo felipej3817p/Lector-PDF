@@ -91,9 +91,9 @@
             <div class="form-field">
               <label class="label" for="excelEnabled">Estado de trabajador</label>
               <select id="excelEnabled" v-model="excelFilters.enabled" class="form-select">
-                <option value="">Todos</option>
-                <option value="true">ACTIVO</option>
-                <option value="false">INACTIVO</option>
+                <option value="">Ambos</option>
+                <option value="true">Habilitado</option>
+                <option value="false">Inhabilitado</option>
               </select>
             </div>
 
@@ -233,9 +233,9 @@
             <div class="form-field">
               <label class="label" for="csvEnabled">Estado de trabajador</label>
               <select id="csvEnabled" v-model="csvFilters.enabled" class="form-select">
-                <option value="">Todos</option>
-                <option value="true">ACTIVO</option>
-                <option value="false">INACTIVO</option>
+                <option value="">Ambos</option>
+                <option value="true">Habilitado</option>
+                <option value="false">Inhabilitado</option>
               </select>
             </div>
 

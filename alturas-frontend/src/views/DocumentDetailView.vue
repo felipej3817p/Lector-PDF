@@ -526,11 +526,13 @@ import {
 } from '../api/document'
 import { getEmployeeById } from '../api/employee'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 import http from '../api/http'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const loading = ref(false)
 const analyzing = ref(false)
@@ -932,7 +934,14 @@ const resendEmailAction = async () => {
     return
   }
 
-  if (!window.confirm('¿Deseas reenviar la notificación al trabajador?')) {
+  const confirmed = await ui.showConfirm({
+    title: 'Reenviar notificación',
+    message: '¿Deseas reenviar la notificación al trabajador?',
+    confirmText: 'Sí, reenviar',
+    type: 'warning'
+  })
+  
+  if (!confirmed) {
     return
   }
 
@@ -1098,7 +1107,12 @@ const deleteDocumentAction = async () => {
     return
   }
 
-  const confirmed = window.confirm('¿Seguro que quieres eliminar este documento? Esta acción no se puede deshacer.')
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar documento',
+    message: '¿Seguro que quieres eliminar este documento? Esta acción no se puede deshacer.',
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
 
   if (!confirmed) return
 

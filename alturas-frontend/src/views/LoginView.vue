@@ -13,7 +13,12 @@
             <img
               src="/logofinalblanco.png"
               alt="Logo SST Alturas"
-              class="login-brand-logo"
+              class="login-brand-logo light-theme-logo"
+            />
+            <img
+              src="/logofinaloscuro.png"
+              alt="Logo SST Alturas"
+              class="login-brand-logo dark-theme-logo"
             />
           </div>
 

@@ -889,6 +889,7 @@ import { getEmployees } from '../api/employee'
 import { getDocuments, analyzeDocument } from '../api/document'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 import {
   PRIMARY_AREA_OPTIONS,
   areaLabel,
@@ -899,6 +900,7 @@ import {
 } from '../utils/areaCatalog'
 
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const areaOptions = computed(() => PRIMARY_AREA_OPTIONS)
 
@@ -976,10 +978,12 @@ const isInitializing = ref(true)
 const analyzeAllGlobal = async () => {
   if (isViewerOnly.value || !auth.canUploadDocuments) return
 
-  const confirmed = window.confirm(
-    '¿Seguro que deseas reevaluar TODOS los PDFs del sistema?\n\n' +
-    'Esto procesará los documentos de todos los trabajadores uno por uno y puede tomar varios minutos. Por favor no cierres la pestaña.'
-  )
+  const confirmed = await ui.showConfirm({
+    title: 'Reevaluar documentos',
+    message: '¿Seguro que deseas reevaluar TODOS los PDFs del sistema?\n\nEsto procesará los documentos de todos los trabajadores uno por uno y puede tomar varios minutos. Por favor no cierres la pestaña.',
+    confirmText: 'Sí, reevaluar',
+    type: 'warning'
+  })
   if (!confirmed) return
 
   globalAnalyzing.value = true
@@ -992,7 +996,11 @@ const analyzeAllGlobal = async () => {
 
     if (!docsWithId.length) {
       globalAnalyzing.value = false
-      alert('No hay documentos en el sistema para reevaluar.')
+      ui.showAlert({
+        title: 'Atención',
+        message: 'No hay documentos en el sistema para reevaluar.',
+        type: 'info'
+      })
       return
     }
 
@@ -1585,9 +1593,12 @@ const deleteEmployeeRecord = async (employee) => {
   if (!auth.canWriteEmployees || !employee?.id) return
 
   const workerName = fullName(employee) || documentLabel(employee) || 'este trabajador'
-  const confirmed = window.confirm(
-    `Seguro que quieres eliminar a ${workerName}? Si tiene PDFs o evaluaciones asociadas, tambien se eliminaran del historial.`
-  )
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar trabajador',
+    message: `¿Seguro que quieres eliminar a ${workerName}? Si tiene PDFs o evaluaciones asociadas, tambien se eliminaran del historial.`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
 
   if (!confirmed) return
 
@@ -1649,7 +1660,11 @@ const viewPdf = async (documentId) => {
   } catch (err) {
     if (pdfWindow) pdfWindow.close()
     console.error('Error abriendo PDF:', err)
-    alert('No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.')
+    ui.showAlert({
+      title: 'Error',
+      message: 'No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.',
+      type: 'error'
+    })
   }
 }
 

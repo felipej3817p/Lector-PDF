@@ -4,8 +4,10 @@ import { getDocuments } from '../api/document'
 import { getEmployees } from '../api/employee'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 
 const auth = useAuthStore()
+const ui = useUIStore()
 const documents = ref([])
 const employees = ref([])
 const analysisById = ref({})
@@ -355,7 +357,12 @@ const loadDocuments = async () => {
 }
 
 const backfillExtractedData = async () => {
-  const confirmed = window.confirm('Esto reanaliza documentos antiguos para completar fecha de evaluación y fecha de nacimiento sin cambiar la trazabilidad. ¿Continuar?')
+  const confirmed = await ui.showConfirm({
+    title: 'Reprocesar documentos',
+    message: 'Esto reanaliza documentos antiguos para completar fecha de evaluación y fecha de nacimiento sin cambiar la trazabilidad. ¿Continuar?',
+    confirmText: 'Sí, continuar',
+    type: 'warning'
+  })
   if (!confirmed) return
 
   try {
@@ -365,7 +372,11 @@ const backfillExtractedData = async () => {
     const { data } = await http.post('/api/documents/backfill-extracted-data')
     await loadDocuments()
 
-    window.alert(`Reproceso terminado. Revisados: ${data?.checked ?? 0}. Actualizados: ${data?.updated ?? 0}. Errores: ${data?.failed ?? 0}.`)
+    ui.showAlert({
+      title: 'Reproceso terminado',
+      message: `Revisados: ${data?.checked ?? 0}. Actualizados: ${data?.updated ?? 0}. Errores: ${data?.failed ?? 0}.`,
+      type: 'success'
+    })
   } catch (err) {
     error.value = err?.response?.data?.message || 'No se pudo reprocesar la información extraída.'
   } finally {
@@ -400,7 +411,11 @@ const viewPdf = async (documentId) => {
   } catch (err) {
     if (pdfWindow) pdfWindow.close()
     console.error('Error abriendo PDF:', err)
-    alert('No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.')
+    ui.showAlert({
+      title: 'Error',
+      message: 'No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.',
+      type: 'error'
+    })
   }
 }
 

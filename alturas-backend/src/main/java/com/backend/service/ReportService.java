@@ -269,7 +269,6 @@ public class ReportService {
                     formatCsvDate(employee.getBirthDate()),
                     safe(employee.getEducationalLevel()),
                     defaultIfBlank(defaultProcess, "Distribucion"), // Distribución por defecto
-                    resolveAreaLabel(employee),
                     safe(employee.getCurrentPosition()),
                     defaultIfBlank(defaultEconomicSector, "Sector minero y energetico"),
                     defaultIfBlank(defaultCompany, "Empresa de energia de Boyaca"),
@@ -382,7 +381,7 @@ public class ReportService {
                 String resultStatus = normalizeResultStatus(analysis.getResultStatus());
                 LocalDate conceptDate = resolveConceptDate(document, analysis);
 
-                if (isExpired(conceptDate)) {
+                if (!historyMode && isExpired(conceptDate)) {
                     resultStatus = "VIGENCIA_VENCIDA";
                 }
 

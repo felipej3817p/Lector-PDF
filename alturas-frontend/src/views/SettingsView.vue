@@ -504,6 +504,9 @@
                         </span>
                       </strong>
                       <small>{{ userAccessStatus(user).detail }}</small>
+                      <small class="mt-1 d-block text-muted">
+                        Último acceso: <strong>{{ formatValidityDate(user.lastLoginAt, 'Nunca') }}</strong>
+                      </small>
                     </div>
 
                     <div class="user-account-card__actions">
@@ -529,6 +532,12 @@
                             @click="runUserAction(() => toggleUserEnabled(user))"
                           >
                             {{ togglingId === user.id ? 'Actualizando...' : user.enabled ? 'Inactivar usuario' : 'Activar usuario' }}
+                          </button>
+                          <button
+                            type="button"
+                            @click="runUserAction(() => resetPasswordTemp(user))"
+                          >
+                            Restablecer contraseña
                           </button>
                           <button
                             type="button"
@@ -597,8 +606,8 @@
                     :key="option.value"
                     type="button"
                     class="theme-option"
-                    :class="{ active: selectedTheme === option.value }"
-                    @click="setTheme(option.value)"
+                    :class="{ active: ui.currentTheme === option.value }"
+                    @click="ui.setTheme(option.value)"
                   >
                     <span
                       class="theme-option__preview"
@@ -906,10 +915,12 @@ import { RouterLink } from 'vue-router'
 import http from '../api/http'
 import { getSystemSettings, updateSystemSettings } from '../api/systemSettings'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 import { AREA_CODES, areaLabel, areaScopeSummary, normalizeAreaCode, normalizeAreaList } from '../utils/areaCatalog'
 import { applyTheme, getStoredTheme, saveTheme } from '../utils/themePreferences'
 
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const PRODUCTION_FRONTEND_URL = 'https://sstalturas.ebsa.com.co'
 
@@ -1034,8 +1045,7 @@ const currentPage = ref(1)
 const USERS_PER_PAGE = 6
 const roleOptions = ['ADMIN', 'APROBADOR', 'OPERADOR', 'VISUALIZADOR']
 
-const selectedTheme = ref(getStoredTheme(auth.user))
-
+// ui.currentTheme handles the syncing
 const createMailGroup = () => ({
   input: '',
   items: []
@@ -1416,9 +1426,7 @@ watch(totalPages, (pages) => {
   }
 })
 
-const setTheme = (theme) => {
-  selectedTheme.value = saveTheme(theme, auth.user)
-}
+// removed setTheme function, UI store handles it now
 
 const loadLocalSettings = async () => {
   if (!auth.canEditEmailSettings && !auth.canManageUsers) return
@@ -1791,7 +1799,12 @@ const saveUser = async () => {
 
 const toggleUserEnabled = async (user) => {
   const nextEnabled = !user.enabled
-  const confirmed = window.confirm(`Seguro que deseas ${nextEnabled ? 'activar' : 'inactivar'} este usuario?`)
+  const confirmed = await ui.showConfirm({
+    title: `${nextEnabled ? 'Activar' : 'Inactivar'} usuario`,
+    message: `¿Seguro que deseas ${nextEnabled ? 'activar' : 'inactivar'} este usuario?`,
+    confirmText: `Sí, ${nextEnabled ? 'activar' : 'inactivar'}`,
+    type: nextEnabled ? 'primary' : 'danger'
+  })
   if (!confirmed) return
 
   try {
@@ -1811,7 +1824,12 @@ const toggleUserEnabled = async (user) => {
 const deleteUser = async (user) => {
   if (!user?.id) return
 
-  const confirmed = window.confirm(`Seguro que deseas eliminar el usuario ${user.username}? Esta accion no se puede deshacer.`)
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar usuario',
+    message: `¿Seguro que deseas eliminar el usuario ${user.username}? Esta accion no se puede deshacer.`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
   if (!confirmed) return
 
   try {
@@ -1837,14 +1855,52 @@ const runUserAction = (action) => {
   return action()
 }
 
+const resetPasswordTemp = async (user) => {
+  if (!user?.id) return
+
+  const confirmed = await ui.showConfirm({
+    title: 'Restablecer contraseña',
+    message: `¿Seguro que deseas restablecer la contraseña para el usuario ${user.username}? Se generará una contraseña temporal.`,
+    confirmText: 'Sí, restablecer',
+    type: 'warning'
+  })
+
+  if (!confirmed) return
+
+  try {
+    usersError.value = ''
+    successMessage.value = ''
+
+    const { data } = await http.post(`/api/users/${user.id}/reset-password-temp`)
+    const tempPassword = data.tempPassword
+
+    ui.showAlert({
+      title: 'Contraseña Restablecida',
+      htmlContent: `
+        <div class="text-center">
+          <p class="mb-4">La contraseña de <strong>${user.username}</strong> ha sido restablecida con éxito.</p>
+          <div style="border: 1.5px dashed var(--border-strong); border-radius: 8px; padding: 1.5rem; background: var(--surface-soft); margin-bottom: 1.5rem;">
+            <span style="font-size: 1.75rem; font-weight: bold; color: var(--primary); font-family: monospace; letter-spacing: 2px;">${tempPassword}</span>
+          </div>
+          <p class="text-muted mb-0" style="font-size: 0.9rem;">Por favor, entrega esta contraseña al usuario. El sistema le pedirá cambiarla al ingresar de forma obligatoria.</p>
+        </div>
+      `,
+      type: 'success'
+    })
+
+    await loadUsers()
+  } catch (err) {
+    usersError.value = err?.response?.data?.message || 'No se pudo restablecer la contraseña.'
+  }
+}
+
 onMounted(async () => {
   accessClockInterval = window.setInterval(() => {
     accessClock.value = Date.now()
   }, 15000)
 
-  selectedTheme.value = getStoredTheme(auth.user)
-  applyTheme(selectedTheme.value)
-
+  // theme initialization is already handled by App.vue calling ui.initTheme()
+  
   if (auth.canAccessSettings) {
     await refreshAll()
   }

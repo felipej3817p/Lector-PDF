@@ -1313,10 +1313,10 @@ const defaultProcessingMessage = (item) => {
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.85rem 0.95rem;
-  border: 1px solid rgba(146, 64, 14, 0.24);
+  border: 1px solid var(--warning);
   border-radius: 14px;
-  background: #fffbeb;
-  color: #111827;
+  background: var(--warning-soft);
+  color: var(--text);
 }
 
 .historical-upload-option__label input {
@@ -1334,7 +1334,7 @@ const defaultProcessingMessage = (item) => {
 }
 
 .historical-upload-option__label small {
-  color: #92400e;
+  color: var(--warning);
   font-size: 0.78rem;
   line-height: 1.35;
 }

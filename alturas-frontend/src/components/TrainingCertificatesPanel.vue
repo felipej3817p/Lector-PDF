@@ -217,8 +217,10 @@ import {
   uploadTrainingCertificate
 } from '../api/trainingCertificates'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 
 const authStore = useAuthStore()
+const ui = useUIStore()
 
 const canModify = computed(() => {
   return authStore.isSuperAdmin || authStore.isAdmin || authStore.isOperator
@@ -448,7 +450,11 @@ const viewFile = async (certificate) => {
       window.URL.revokeObjectURL(url)
     }, 60000)
   } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo abrir la constancia.'
+    ui.showAlert({
+      title: 'Error',
+      message: err?.response?.data?.message || 'No se pudo abrir la constancia.',
+      type: 'error'
+    })
   }
 }
 
@@ -467,7 +473,12 @@ const downloadFile = async (certificate) => {
 }
 
 const removeFile = async (certificate) => {
-  const confirmed = window.confirm('¿Deseas eliminar esta constancia?')
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar constancia',
+    message: '¿Deseas eliminar esta constancia?',
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
 
   if (!confirmed) return
 

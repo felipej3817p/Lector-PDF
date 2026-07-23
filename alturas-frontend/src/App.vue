@@ -8,7 +8,6 @@
       <RouterView />
     </main>
 
-    <!-- Modal for forced password change -->
     <div class="modal-overlay" v-if="authStore.user?.mustChangePassword">
       <div class="modal-content">
         <h2>Cambio de Contraseña Obligatorio</h2>
@@ -32,17 +31,24 @@
       </div>
     </div>
   </div>
+
+  <GlobalModals />
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import AppNavbar from './components/AppNavbar.vue'
+import GlobalModals from './components/GlobalModals.vue'
 import { useAuthStore } from './stores/auth'
+import { useUIStore } from './stores/ui'
 import http from './api/http'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const uiStore = useUIStore()
+
+uiStore.initTheme()
 
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -105,22 +111,24 @@ const changePassword = async () => {
 }
 
 .modal-content {
-  background: white;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 2rem;
   border-radius: 12px;
   width: 90%;
   max-width: 400px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
 }
 
 .modal-content h2 {
   margin-top: 0;
   margin-bottom: 1rem;
-  color: #0f172a;
+  color: var(--text);
 }
 
 .modal-content p {
-  color: #475569;
+  color: var(--text-soft);
   margin-bottom: 1.5rem;
   font-size: 0.95rem;
 }
