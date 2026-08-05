@@ -21,7 +21,8 @@ public class PdfFieldParserService {
             DateTimeFormatter.ofPattern("d/M/yyyy"),
             DateTimeFormatter.ofPattern("dd/MM/yyyy"),
             DateTimeFormatter.ofPattern("d-M-yyyy"),
-            DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+            DateTimeFormatter.ofPattern("yyyyMMdd"));
     private static final Map<String, Integer> SPANISH_MONTHS = Map.ofEntries(
             Map.entry("ene", 1),
             Map.entry("enero", 1),
@@ -81,7 +82,9 @@ public class PdfFieldParserService {
         String laborConcept = firstNonBlank(
                 extractNormalized(normalized, "CONCEPTO LABORAL\\s*(.*?)\\s*Observaciones:", 1),
                 extractNormalized(normalized, "Concepto para trabajo en alturas:\\s*(.*?)\\s*Resultado:", 1),
-                extractNormalized(normalized, "Resultado:\\s*(APTO|NO\\s*APTO|NO_APTO|CUMPLE|NO\\s*CUMPLE|SI\\s*CUMPLE|SI\\s*PUEDE|NO\\s*ADMITIDO|NO\\s*ES\\s*APTO)", 1));
+                extractNormalized(normalized,
+                        "Resultado:\\s*(APTO|NO\\s*APTO|NO_APTO|CUMPLE|NO\\s*CUMPLE|SI\\s*CUMPLE|SI\\s*PUEDE|NO\\s*ADMITIDO|NO\\s*ES\\s*APTO)",
+                        1));
 
         String observations = extractNormalized(
                 normalized,
@@ -140,6 +143,9 @@ public class PdfFieldParserService {
         String ascii = removeAccents(normalized);
 
         String fromSpecificLabels = firstNonBlank(
+                extractNormalized(normalized,
+                        "Fecha\\s*apertura\\s*[:\\-]?\\s*(\\d{8}|\\d{1,2}[/-]\\d{1,2}[/-]\\d{4})",
+                        1),
                 extractNormalized(ascii,
                         "Fecha\\s*y\\s*Lugar\\s*[:\\-]?\\s*(\\d{1,2}\\s+(?:de\\s+)?[a-z]+\\.?\\s+(?:de\\s+)?\\d{4})",
                         1),
@@ -274,7 +280,8 @@ public class PdfFieldParserService {
                 extractNormalized(normalized, "Documento:\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(normalized, "Cédula:\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(normalized, "Cedula:\\s*([\\d\\.\\s-]{5,20})", 1),
-                extractNormalized(normalized, "C[eé]dula\\s+de\\s+ciudadan[ií]a\\s+n[uú]mero\\s*([\\d\\.\\s-]{5,20})", 1),
+                extractNormalized(normalized, "C[eé]dula\\s+de\\s+ciudadan[ií]a\\s+n[uú]mero\\s*([\\d\\.\\s-]{5,20})",
+                        1),
                 extractNormalized(normalized, "CC\\s*[:#-]?\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(ascii, "Identificacion:\\s*([\\d\\.\\s-]{5,20})", 1),
                 extractNormalized(ascii, "Numero de documento:\\s*([\\d\\.\\s-]{5,20})", 1),
