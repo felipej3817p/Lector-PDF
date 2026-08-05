@@ -187,6 +187,95 @@ public class EmployeeService {
         );
     }
 
+    public void deleteBulkEmployees(List<String> ids) {
+        if (ids == null || ids.isEmpty()) return;
+        for (String id : ids) {
+            try {
+                deleteEmployee(id);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    public void deleteBulkEvaluations(List<String> ids) {
+        accessScopeService.assertCanWriteEmployees();
+        if (ids == null || ids.isEmpty()) return;
+        String actor = accessScopeService.getCurrentUser().getUsername();
+
+        for (String id : ids) {
+            Employee employee = employeeRepository.findById(id).orElse(null);
+            if (employee == null) continue;
+            try {
+                accessScopeService.validateAreaAccess(employee.getAreaCode());
+            } catch (Exception e) {
+                continue;
+            }
+
+            List<ManagedDocument> documents = managedDocumentRepository.findByEmployeeId(id);
+            int count = 0;
+            for (ManagedDocument doc : documents) {
+                if (!doc.isHistorical()) {
+                    documentService.deleteDocument(doc.getId());
+                    count++;
+                }
+            }
+            if (count > 0) {
+                auditLogService.log("EMPLOYEE", id, "DELETED_EVALUATIONS", actor, "Evaluaciones eliminadas masivamente.", Map.of("count", count));
+            }
+        }
+    }
+
+    public void deleteBulkHistorical(List<String> ids) {
+        accessScopeService.assertCanWriteEmployees();
+        if (ids == null || ids.isEmpty()) return;
+        String actor = accessScopeService.getCurrentUser().getUsername();
+
+        for (String id : ids) {
+            Employee employee = employeeRepository.findById(id).orElse(null);
+            if (employee == null) continue;
+            try {
+                accessScopeService.validateAreaAccess(employee.getAreaCode());
+            } catch (Exception e) {
+                continue;
+            }
+
+            List<ManagedDocument> documents = managedDocumentRepository.findByEmployeeId(id);
+            int count = 0;
+            for (ManagedDocument doc : documents) {
+                if (doc.isHistorical()) {
+                    documentService.deleteDocument(doc.getId());
+                    count++;
+                }
+            }
+            if (count > 0) {
+                auditLogService.log("EMPLOYEE", id, "DELETED_HISTORICAL", actor, "Historial eliminado masivamente.", Map.of("count", count));
+            }
+        }
+    }
+
+    public void deleteBulkCertificates(List<String> ids) {
+        accessScopeService.assertCanWriteEmployees();
+        if (ids == null || ids.isEmpty()) return;
+        String actor = accessScopeService.getCurrentUser().getUsername();
+
+        for (String id : ids) {
+            Employee employee = employeeRepository.findById(id).orElse(null);
+            if (employee == null) continue;
+            try {
+                accessScopeService.validateAreaAccess(employee.getAreaCode());
+            } catch (Exception e) {
+                continue;
+            }
+
+            List<TrainingCertificate> certificates = trainingCertificateRepository.findByEmployeeIdOrderByUploadedAtDesc(id);
+            if (!certificates.isEmpty()) {
+                certificates.forEach(this::deleteCertificateFileIfExists);
+                trainingCertificateRepository.deleteAll(certificates);
+                auditLogService.log("EMPLOYEE", id, "DELETED_CERTIFICATES", actor, "Constancias eliminadas masivamente.", Map.of("count", certificates.size()));
+            }
+        }
+    }
+
     private void deleteCertificateFileIfExists(TrainingCertificate certificate) {
         if (certificate == null || safe(certificate.getFilePath()).isBlank()) {
             return;

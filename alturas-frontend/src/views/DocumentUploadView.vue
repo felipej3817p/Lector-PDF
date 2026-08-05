@@ -580,6 +580,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 import {
   MAX_SINGLE_PDF_BYTES,
   clearUploadSession,
@@ -592,6 +593,7 @@ import {
 } from '../utils/documentUploadHelpers'
 
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const error = ref('')
 const successMessage = ref('')
@@ -945,6 +947,16 @@ const clearBatch = () => {
 
 const submitBatch = async () => {
   if (batchLoading.value || !batchFiles.value.length) return
+
+  const actionName = constanciasMode.value ? 'las constancias' : (historicalMode.value ? 'los históricos' : 'las evaluaciones')
+  const confirmed = await ui.showConfirm({
+    title: 'Confirmación de carga',
+    message: `¿Estás seguro de que deseas procesar ${actionName} seleccionados?`,
+    confirmText: 'Sí, procesar',
+    type: 'warning'
+  })
+
+  if (!confirmed) return
 
   try {
     batchLoading.value = true

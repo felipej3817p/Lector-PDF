@@ -243,9 +243,43 @@
               </div>
             </div>
 
+            <div v-if="auth.canWriteEmployees && selectedIds.length > 0" class="bulk-actions-panel">
+              <div class="bulk-info">
+                <strong>{{ selectedIds.length }}</strong>
+                <span>
+                  trabajador{{ selectedIds.length === 1 ? '' : 'es' }}
+                  seleccionado{{ selectedIds.length === 1 ? '' : 's' }}
+                </span>
+              </div>
+
+              <div class="bulk-actions">
+                <button
+                  type="button"
+                  class="secondary-btn compact-action-btn"
+                  @click="toggleSelectVisible"
+                  :disabled="bulkLoading"
+                >
+                  {{ allVisibleSelected ? 'Quitar visibles' : 'Seleccionar visibles' }}
+                </button>
+
+                <details class="row-actions-menu bulk-delete-menu">
+                  <summary class="compact-action-btn">
+                    Eliminar masivamente
+                  </summary>
+                  <div class="row-actions-menu__content">
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('employees')">Borrar trabajadores</button>
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('evaluations')">Borrar evaluaciones</button>
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('historical')">Borrar historial</button>
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('certificates')">Borrar constancias</button>
+                  </div>
+                </details>
+              </div>
+            </div>
+
             <div class="table-fit-wrapper">
               <table class="table table-hover align-middle tracking-table">
                 <colgroup>
+                  <col v-if="auth.canWriteEmployees" class="col-select" style="width: 48px;" />
                   <col class="col-document" />
                   <col class="col-worker" />
                   <col class="col-zone" />
@@ -258,6 +292,14 @@
 
                 <thead>
                   <tr>
+                    <th v-if="auth.canWriteEmployees" class="text-center">
+                      <input
+                        type="checkbox"
+                        :checked="allVisibleSelected"
+                        @change="toggleSelectVisible"
+                        :disabled="bulkLoading"
+                      />
+                    </th>
                     <th>Cedula</th>
                     <th>Trabajador</th>
                     <th>Zona</th>
@@ -276,9 +318,18 @@
                     :class="{
                       'row-critical': row.resultStatus === 'NO_APTO',
                       'row-pending': row.reviewStatus === 'PENDING_REVIEW',
-                      'row-expired': row.evaluationExpired
+                      'row-expired': row.evaluationExpired,
+                      'row-selected': selectedIds.includes(row.employee.id)
                     }"
                   >
+                    <td v-if="auth.canWriteEmployees" class="text-center">
+                      <input
+                        type="checkbox"
+                        :checked="selectedIds.includes(row.employee.id)"
+                        @change="toggleSelected(row.employee.id)"
+                        :disabled="bulkLoading"
+                      />
+                    </td>
                     <td>
                       <strong class="document-cell">{{ documentLabel(row.employee) }}</strong>
                     </td>
@@ -885,7 +936,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { getEmployees } from '../api/employee'
+import { getEmployees, deleteBulkEmployees, deleteBulkEvaluations, deleteBulkHistorical, deleteBulkCertificates } from '../api/employee'
 import { getDocuments, analyzeDocument } from '../api/document'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
@@ -944,8 +995,8 @@ const canViewWorkflowDetails = computed(() => !isViewerOnly.value)
 const canOpenDocumentFiles = computed(() => !isViewerOnly.value)
 
 const employeeTableColspan = computed(() => {
-  if (isViewerOnly.value) return 4
-  return canViewWorkflowDetails.value ? 8 : 6
+  if (isViewerOnly.value) return 5
+  return canViewWorkflowDetails.value ? 9 : 7
 })
 
 const employees = ref([])
@@ -1461,6 +1512,87 @@ const resetFilters = () => {
   closeAllActionMenus()
 }
 
+const selectedIds = ref([])
+const bulkLoading = ref(false)
+
+const allVisibleSelected = computed(() => {
+  if (!paginatedRows.value.length) return false
+  return paginatedRows.value.every((row) => selectedIds.value.includes(row.employee.id))
+})
+
+const toggleSelected = (id) => {
+  const index = selectedIds.value.indexOf(id)
+  if (index === -1) {
+    selectedIds.value.push(id)
+  } else {
+    selectedIds.value.splice(index, 1)
+  }
+}
+
+const toggleSelectVisible = () => {
+  if (allVisibleSelected.value) {
+    paginatedRows.value.forEach((row) => {
+      const index = selectedIds.value.indexOf(row.employee.id)
+      if (index !== -1) {
+        selectedIds.value.splice(index, 1)
+      }
+    })
+  } else {
+    paginatedRows.value.forEach((row) => {
+      if (!selectedIds.value.includes(row.employee.id)) {
+        selectedIds.value.push(row.employee.id)
+      }
+    })
+  }
+}
+
+const executeBulkDelete = async (type) => {
+  if (!selectedIds.value.length) return
+
+  const typeLabels = {
+    employees: 'trabajadores',
+    evaluations: 'evaluaciones',
+    historical: 'historiales',
+    certificates: 'constancias'
+  }
+  const label = typeLabels[type] || 'registros'
+
+  const confirmed = await ui.showConfirm({
+    title: `Eliminar masivamente`,
+    message: `¿Deseas eliminar permanentemente los/las ${label} de ${selectedIds.value.length} trabajador${selectedIds.value.length === 1 ? '' : 'es'} seleccionado${selectedIds.value.length === 1 ? '' : 's'}? ¡Esta acción no se puede deshacer!`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
+
+  if (!confirmed) return
+
+  try {
+    bulkLoading.value = true
+    error.value = ''
+
+    if (type === 'employees') {
+      await deleteBulkEmployees(selectedIds.value)
+    } else if (type === 'evaluations') {
+      await deleteBulkEvaluations(selectedIds.value)
+    } else if (type === 'historical') {
+      await deleteBulkHistorical(selectedIds.value)
+    } else if (type === 'certificates') {
+      await deleteBulkCertificates(selectedIds.value)
+    }
+
+    selectedIds.value = []
+    await loadData()
+    employeeSuccessMessage.value = 'Eliminación masiva completada correctamente.'
+    setTimeout(() => {
+      employeeSuccessMessage.value = ''
+    }, 4000)
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'Error durante la eliminación masiva.'
+  } finally {
+    bulkLoading.value = false
+  }
+}
+
 const openEmployeeModal = (row) => {
   selectedRow.value = row
 }
@@ -1929,6 +2061,40 @@ onBeforeUnmount(() => {
   padding: 0.4rem 0.7rem;
 }
 
+.bulk-actions-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.bulk-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.bulk-info strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.compact-action-btn {
+  min-height: 34px;
+  padding: 0.42rem 0.62rem;
+  font-size: 0.76rem;
+}
+
 .table-fit-wrapper {
   width: 100%;
   overflow: visible;
@@ -2170,6 +2336,27 @@ onBeforeUnmount(() => {
   color: #7f1d1d;
   border-color: #fca5a5;
   background: #ffe4e6;
+}
+
+.bulk-delete-menu summary {
+  color: #991b1b !important;
+  border-color: #fecaca !important;
+  background: #fff1f2 !important;
+  min-height: 34px !important;
+  padding: 0.42rem 0.62rem !important;
+  font-size: 0.76rem !important;
+  border-radius: 12px !important;
+}
+
+.bulk-delete-menu summary:hover,
+.bulk-delete-menu[open] summary {
+  color: #7f1d1d !important;
+  border-color: #fca5a5 !important;
+  background: #ffe4e6 !important;
+}
+
+.bulk-delete-menu summary::after {
+  border-color: #991b1b !important;
 }
 
 .google-pagination {
