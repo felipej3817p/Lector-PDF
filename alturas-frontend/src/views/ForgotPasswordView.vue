@@ -10,14 +10,18 @@
       <div class="card-body p-4 p-md-5">
         <div class="login-brand">
           <img
-            src="/sst-alturas-icon.svg"
-            alt="SSTAlturas"
-            class="login-brand-logo"
+            src="/logofinalblanco.png"
+            alt="Alturas"
+            class="login-brand-logo light-theme-logo"
+          />
+          <img
+            src="/logofinaloscuro.png"
+            alt="Alturas"
+            class="login-brand-logo dark-theme-logo"
           />
 
           <div>
-            <div class="login-brand-title">SSTAlturas</div>
-            <div class="login-brand-subtitle">Gestión de aptitud en alturas</div>
+            <div class="login-brand-subtitle">Gestión de aptitudes</div>
           </div>
         </div>
 
@@ -208,17 +212,24 @@ onBeforeUnmount(() => {
 
 .login-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 1.5rem;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
 .login-brand-logo {
-  width: 74px;
-  height: 74px;
-  border-radius: 16px;
+  height: 130px;
+  width: auto;
+  max-width: 100%;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+.login-brand-logo.dark-theme-logo {
+  height: 130px;
 }
 
 .login-brand-title {
@@ -228,7 +239,8 @@ onBeforeUnmount(() => {
 }
 
 .login-brand-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;

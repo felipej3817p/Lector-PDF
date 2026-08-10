@@ -148,7 +148,9 @@ export const useAuthStore = defineStore('auth', {
         email: data?.email || '',
         roles: getRoles(data),
         allowedAreas: Array.isArray(data?.allowedAreas) ? data.allowedAreas : [],
-        globalAreaAccess: Boolean(data?.globalAreaAccess)
+        globalAreaAccess: Boolean(data?.globalAreaAccess),
+        lastLoginAt: data?.lastLoginAt,
+        mustChangePassword: Boolean(data?.mustChangePassword)
       }
 
       this.setSession(token, user)

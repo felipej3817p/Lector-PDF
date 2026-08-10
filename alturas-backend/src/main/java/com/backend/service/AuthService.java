@@ -141,13 +141,18 @@ public class AuthService {
 
         String token = jwtService.generateToken(user.getUsername(), authorities);
 
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+
         return new AuthResponse(
                 token,
                 user.getUsername(),
                 user.getEmail(),
                 effectiveRoles,
                 effectiveAllowedAreas,
-                user.isGlobalAreaAccess()
+                user.isGlobalAreaAccess(),
+                user.getLastLoginAt(),
+                user.isMustChangePassword()
         );
     }
 
@@ -190,7 +195,9 @@ public class AuthService {
                 saved.getEmail(),
                 effectiveRoles,
                 effectiveAllowedAreas,
-                saved.isGlobalAreaAccess()
+                saved.isGlobalAreaAccess(),
+                null,
+                false
         );
     }
 
@@ -255,6 +262,7 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false);
         userRepository.save(user);
 
         resetToken.setUsed(true);
@@ -406,8 +414,16 @@ public class AuthService {
     }
 
     private boolean isExpired(User user) {
-        return user.getAccountExpirationDate() != null &&
-                !LocalDateTime.now().isBefore(user.getAccountExpirationDate());
+        return user.getAccountExpirationDate() != null && LocalDateTime.now().isAfter(user.getAccountExpirationDate());
+    }
+
+    public void changePassword(String username, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
     }
 
     private boolean isNotStarted(User user) {

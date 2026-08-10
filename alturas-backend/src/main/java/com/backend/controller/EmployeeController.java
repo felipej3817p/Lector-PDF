@@ -51,4 +51,28 @@ public class EmployeeController {
         employeeService.deleteEmployee(id);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Void> deleteBulkEmployees(@RequestBody List<String> ids) {
+        employeeService.deleteBulkEmployees(ids);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/bulk/evaluations")
+    public ResponseEntity<Void> deleteBulkEvaluations(@RequestBody List<String> ids) {
+        employeeService.deleteBulkEvaluations(ids);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/bulk/historical")
+    public ResponseEntity<Void> deleteBulkHistorical(@RequestBody List<String> ids) {
+        employeeService.deleteBulkHistorical(ids);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/bulk/certificates")
+    public ResponseEntity<Void> deleteBulkCertificates(@RequestBody List<String> ids) {
+        employeeService.deleteBulkCertificates(ids);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -456,6 +456,7 @@
                   <th>Áreas</th>
                   <th>Estado</th>
                   <th>Vigencia</th>
+                  <th>Último Acceso</th>
                   <th class="text-center">Acciones</th>
                 </tr>
               </thead>
@@ -472,13 +473,25 @@
                     <span v-else>{{ normalizeAreaList(user.allowedAreas || []).map(areaLabel).join(', ') || '-' }}</span>
                   </td>
                   <td>
+                  </td>
+                  <td>
                     <span :class="user.enabled ? 'status-pill-active' : 'status-pill-inactive'">
                       {{ user.enabled ? 'ACTIVO' : 'INACTIVO' }}
                     </span>
                   </td>
                   <td>{{ formatDateTime(user.accountExpirationDate) }}</td>
+                  <td>{{ formatDateTime(user.lastLoginAt) }}</td>
                   <td>
                     <div class="actions justify-content-center">
+                      <button
+                        type="button"
+                        class="secondary-btn"
+                        title="Restablecer contraseña temporal"
+                        @click="resetPasswordTemp(user)"
+                      >
+                        🔑
+                      </button>
+
                       <button
                         type="button"
                         class="secondary-btn"
@@ -519,9 +532,11 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 import { AREA_CODES, areaLabel, normalizeAreaCode, normalizeAreaList } from '../utils/areaCatalog'
 
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const users = ref([])
 const loading = ref(false)
@@ -777,10 +792,16 @@ const saveUser = async () => {
   } finally {
     saving.value = false
   }
-}
+  }
+
 
 const deleteUser = async (id) => {
-  const confirmed = window.confirm('¿Seguro que deseas eliminar este usuario?')
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar usuario',
+    message: '¿Seguro que deseas eliminar este usuario?',
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
   if (!confirmed) return
 
   try {
@@ -793,6 +814,43 @@ const deleteUser = async (id) => {
     error.value = e?.response?.data?.message || 'No se pudo eliminar el usuario.'
   } finally {
     deletingId.value = ''
+  }
+}
+
+const resetPasswordTemp = async (user) => {
+  if (!user?.id) return
+
+  const confirmed = await ui.showConfirm({
+    title: 'Restablecer contraseña',
+    message: `¿Seguro que deseas restablecer la contraseña a un valor temporal para ${user.username}?`,
+    confirmText: 'Sí, restablecer',
+    type: 'warning'
+  })
+
+  if (!confirmed) return
+
+  try {
+    const { data } = await http.post(`/api/users/${user.id}/reset-password-temp`)
+    
+    ui.showAlert({
+      title: 'Contraseña Restablecida',
+      htmlContent: `
+        <div class="text-center">
+          <p class="mb-4">La contraseña de <strong>${user.username}</strong> ha sido restablecida con éxito.</p>
+          <div style="border: 1.5px dashed var(--border-strong); border-radius: 8px; padding: 1.5rem; background: var(--surface-soft); margin-bottom: 1.5rem;">
+            <span style="font-size: 1.75rem; font-weight: bold; color: var(--primary); font-family: monospace; letter-spacing: 2px;">${data.tempPassword}</span>
+          </div>
+          <p class="text-muted mb-0" style="font-size: 0.9rem;">Por favor, entrega esta contraseña al usuario. El sistema le pedirá cambiarla al ingresar de forma obligatoria.</p>
+        </div>
+      `,
+      type: 'success'
+    })
+  } catch (err) {
+    ui.showAlert({
+      title: 'Error',
+      message: err.response?.data?.message || 'Error al restablecer la contraseña.',
+      type: 'error'
+    })
   }
 }
 

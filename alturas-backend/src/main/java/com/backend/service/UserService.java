@@ -269,6 +269,29 @@ public class UserService {
         return toDto(saved);
     }
 
+    public String resetPasswordTemp(String id) {
+        accessScopeService.assertSuperAdmin();
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+
+        // Generate simple password
+        String tempPassword = "iniciar" + (100 + new java.util.Random().nextInt(900)) + "*";
+        
+        user.setPassword(passwordEncoder.encode(tempPassword));
+        user.setMustChangePassword(true);
+        
+        String actor = accessScopeService.getCurrentUser().getUsername();
+        user.setUpdatedBy(actor);
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        userRepository.save(user);
+        auditLogService.log("USER", user.getId(), "UPDATED", actor, "Restablecimiento de contraseña temporal.", Map.of());
+        userAuditLogService.logChange(user, actor, "UPDATED", "password", "********", "******** (temporal)");
+        
+        return tempPassword;
+    }
+
     public Page<UserAuditLog> getAuditLogs(String id, int page, int size) {
         accessScopeService.assertSuperAdmin();
 
@@ -504,7 +527,9 @@ public class UserService {
                 user.getCreatedBy(),
                 user.getUpdatedBy(),
                 user.getEnabledChangedBy(),
-                user.getEnabledChangedAt()
+                user.getEnabledChangedAt(),
+                user.getLastLoginAt(),
+                user.isMustChangePassword()
         );
     }
 

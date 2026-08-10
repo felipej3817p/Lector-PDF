@@ -125,8 +125,8 @@ public class TrainingCertificateService {
 
         Optional<ManagedDocument> latestDocument = findLatestDocument(employeeId);
 
-        response.put("eligible", false);
-        response.put("message", buildEligibilityMessage(latestDocument.orElse(null)));
+        response.put("eligible", true);
+        response.put("message", "La carga de constancia está habilitada independientemente del estado de la evaluación (por solicitud).");
 
         latestDocument.ifPresent(document -> {
             response.put("documentId", document.getId());
@@ -199,15 +199,8 @@ public class TrainingCertificateService {
     }
 
     private void validateCertificateEligibility(String employeeId) {
-        Optional<ManagedDocument> validDocument = findLatestApprovedAndNotifiedDocument(employeeId);
-
-        if (validDocument.isPresent()) {
-            return;
-        }
-
-        Optional<ManagedDocument> latestDocument = findLatestDocument(employeeId);
-
-        throw new IllegalArgumentException(buildEligibilityMessage(latestDocument.orElse(null)));
+        // Validation removed as per user request to allow uploading
+        // Constancias regardless of whether the worker is fully qualified.
     }
 
     private Optional<ManagedDocument> findLatestApprovedAndNotifiedDocument(String employeeId) {

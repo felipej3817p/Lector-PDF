@@ -32,8 +32,7 @@ public class ConsolidatedExportService {
             ManagedDocumentRepository managedDocumentRepository,
             DocumentAnalysisRepository documentAnalysisRepository,
             EmployeeRepository employeeRepository,
-            AccessScopeService accessScopeService
-    ) {
+            AccessScopeService accessScopeService) {
         this.managedDocumentRepository = managedDocumentRepository;
         this.documentAnalysisRepository = documentAnalysisRepository;
         this.employeeRepository = employeeRepository;
@@ -41,14 +40,16 @@ public class ConsolidatedExportService {
     }
 
     /**
-     * Exporta el consolidado CSV completo dentro del alcance del usuario autenticado.
+     * Exporta el consolidado CSV completo dentro del alcance del usuario
+     * autenticado.
      */
     public byte[] exportConsolidatedCsv() {
         List<ManagedDocument> scopedDocuments = getScopedDocuments();
 
         List<ConsolidatedRow> rows = scopedDocuments.stream()
                 .map(this::toConsolidatedRow)
-                .sorted(Comparator.comparing(ConsolidatedRow::uploadedAtSafe, Comparator.nullsLast(Comparator.reverseOrder())))
+                .sorted(Comparator.comparing(ConsolidatedRow::uploadedAtSafe,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .collect(Collectors.toList());
 
         return buildCsv(rows).getBytes(StandardCharsets.UTF_8);
@@ -97,35 +98,29 @@ public class ConsolidatedExportService {
 
         String patientName = firstNonBlank(
                 buildEmployeeFullName(employee),
-                extractStringField(analysis, "patientName")
-        );
+                extractStringField(analysis, "patientName"));
 
         String documentNumber = firstNonBlank(
                 employee != null ? safe(employee.getDocumentNumber()) : "",
-                extractStringField(analysis, "documentNumber")
-        );
+                extractStringField(analysis, "documentNumber"));
 
         String position = firstNonBlank(
                 employee != null ? safe(employee.getCurrentPosition()) : "",
-                extractStringField(analysis, "position")
-        );
+                extractStringField(analysis, "position"));
 
         String workArea = firstNonBlank(
                 employee != null ? safe(employee.getWorkArea()) : "",
-                extractStringField(analysis, "workArea")
-        );
+                extractStringField(analysis, "workArea"));
 
         String zone = firstNonBlank(
                 employee != null ? safe(employee.getZone()) : "",
-                extractStringField(analysis, "zone")
-        );
+                extractStringField(analysis, "zone"));
 
         String email = employee != null ? safe(employee.getEmail()) : "";
         String employer = employee != null ? safe(employee.getEmployer()) : "";
         String arl = firstNonBlank(
                 employee != null ? safe(employee.getArl()) : "",
-                extractStringField(analysis, "arl")
-        );
+                extractStringField(analysis, "arl"));
 
         String laborConcept = extractStringField(analysis, "laborConcept");
         String observations = extractStringField(analysis, "observations");
@@ -133,8 +128,7 @@ public class ConsolidatedExportService {
         String referrals = extractListField(analysis, "referrals");
         String examType = firstNonBlank(
                 safe(document.getExamType()),
-                extractStringField(analysis, "examType")
-        );
+                extractStringField(analysis, "examType"));
 
         String analysisState = analysis != null
                 ? "ANALIZADO"
@@ -160,8 +154,7 @@ public class ConsolidatedExportService {
                 safe(observations),
                 safe(surveillanceProgram),
                 safe(referrals),
-                safe(document.getUploadedBy())
-        );
+                safe(document.getUploadedBy()));
     }
 
     private String buildCsv(List<ConsolidatedRow> rows) {
@@ -180,7 +173,6 @@ public class ConsolidatedExportService {
                 "funcionario",
                 "identificacion",
                 "cargo",
-                "area_dependencia",
                 "zona",
                 "correo",
                 "empleador",
@@ -192,54 +184,51 @@ public class ConsolidatedExportService {
                 "observaciones",
                 "programa_vigilancia",
                 "remisiones",
-                "subido_por"
-        )).append("\n");
+                "subido_por")).append("\n");
 
         for (ConsolidatedRow row : rows) {
             sb.append(csv(row.uploadedAt != null ? row.uploadedAt.format(DATE_FORMAT) : ""))
-              .append(",")
-              .append(csv(row.uploadedAt != null ? row.uploadedAt.format(TIME_FORMAT) : ""))
-              .append(",")
-              .append(csv(row.uploadedAt != null ? row.uploadedAt.format(DATE_TIME_FORMAT) : ""))
-              .append(",")
-              .append(csv(row.originalFileName))
-              .append(",")
-              .append(csv(row.documentType))
-              .append(",")
-              .append(csv(row.examType))
-              .append(",")
-              .append(csv(row.fullName))
-              .append(",")
-              .append(csv(row.documentNumber))
-              .append(",")
-              .append(csv(row.position))
-              .append(",")
-              .append(csv(row.workArea))
-              .append(",")
-              .append(csv(row.zone))
-              .append(",")
-              .append(csv(row.email))
-              .append(",")
-              .append(csv(row.employer))
-              .append(",")
-              .append(csv(row.arl))
-              .append(",")
-              .append(csv(row.areaCode))
-              .append(",")
-              .append(csv(row.resultStatus))
-              .append(",")
-              .append(csv(row.analysisState))
-              .append(",")
-              .append(csv(row.laborConcept))
-              .append(",")
-              .append(csv(row.observations))
-              .append(",")
-              .append(csv(row.surveillanceProgram))
-              .append(",")
-              .append(csv(row.referrals))
-              .append(",")
-              .append(csv(row.uploadedBy))
-              .append("\n");
+                    .append(",")
+                    .append(csv(row.uploadedAt != null ? row.uploadedAt.format(TIME_FORMAT) : ""))
+                    .append(",")
+                    .append(csv(row.uploadedAt != null ? row.uploadedAt.format(DATE_TIME_FORMAT) : ""))
+                    .append(",")
+                    .append(csv(row.originalFileName))
+                    .append(",")
+                    .append(csv(row.documentType))
+                    .append(",")
+                    .append(csv(row.examType))
+                    .append(",")
+                    .append(csv(row.fullName))
+                    .append(",")
+                    .append(csv(row.documentNumber))
+                    .append(",")
+                    .append(csv(row.position))
+                    .append(",")
+                    .append(csv(row.zone))
+                    .append(",")
+                    .append(csv(row.email))
+                    .append(",")
+                    .append(csv(row.employer))
+                    .append(",")
+                    .append(csv(row.arl))
+                    .append(",")
+                    .append(csv(row.areaCode))
+                    .append(",")
+                    .append(csv(row.resultStatus))
+                    .append(",")
+                    .append(csv(row.analysisState))
+                    .append(",")
+                    .append(csv(row.laborConcept))
+                    .append(",")
+                    .append(csv(row.observations))
+                    .append(",")
+                    .append(csv(row.surveillanceProgram))
+                    .append(",")
+                    .append(csv(row.referrals))
+                    .append(",")
+                    .append(csv(row.uploadedBy))
+                    .append("\n");
         }
 
         return sb.toString();
@@ -278,11 +267,10 @@ public class ConsolidatedExportService {
         }
 
         return Arrays.asList(
-                        safe(employee.getFirstName()),
-                        safe(employee.getSecondName()),
-                        safe(employee.getFirstLastName()),
-                        safe(employee.getSecondLastName())
-                ).stream()
+                safe(employee.getFirstName()),
+                safe(employee.getSecondName()),
+                safe(employee.getFirstLastName()),
+                safe(employee.getSecondLastName())).stream()
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.joining(" "))
                 .trim();
@@ -403,8 +391,7 @@ public class ConsolidatedExportService {
                 String observations,
                 String surveillanceProgram,
                 String referrals,
-                String uploadedBy
-        ) {
+                String uploadedBy) {
             this.uploadedAt = uploadedAt;
             this.originalFileName = originalFileName;
             this.documentType = documentType;

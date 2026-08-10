@@ -1,185 +1,191 @@
 # Arquitectura y Diccionario de Archivos - Lector PDF Alturas
 
-Este documento es el diccionario definitivo del proyecto. Muestra cada carpeta, qué hace esa carpeta, y qué hace exactamente cada uno de los archivos que tiene adentro, cubriendo todo el proyecto.
+Este documento es el diccionario técnico y funcional del proyecto. Describe la estructura de directorios, la arquitectura del sistema y la responsabilidad específica de cada archivo dentro del código fuente.
 
 ---
 
 ## 📁 `alturas-frontend`
-**¿Qué hace esta carpeta?** Es todo el proyecto de la interfaz gráfica web. Todo lo que el usuario ve y toca (botones, colores, pantallas) vive aquí.
+**Propósito:** Contiene la aplicación cliente (Single Page Application) desarrollada con Vue 3. Se encarga de la interfaz de usuario, la gestión del estado global en el navegador y la comunicación asíncrona con el backend.
 
-* 📄 `package.json`: Archivo de configuración que lista todas las librerías de internet que necesita el proyecto para funcionar (como Vue, Axios, Bootstrap).
-* 📄 `package-lock.json`: Archivo técnico que bloquea las versiones exactas de las librerías del `package.json` para que el proyecto no se rompa si una librería se actualiza en el futuro.
-* 📄 `vite.config.js`: Configura "Vite", que es el motor que compila el código de Vue y levanta el servidor local (en el puerto 5173). También envía las peticiones `/api` al backend.
-* 📄 `index.html`: Es la única página web real del proyecto. Vue toma este archivo vacío y dibuja toda la aplicación por dentro de él.
-* 📄 `.gitignore`: Lista los archivos que Git no debe subir a la nube (como contraseñas o librerías pesadas).
-* 📄 `README.md`: Archivo de texto básico con instrucciones de cómo correr el frontend.
-* 📄 `frontend-run.log` y `frontend-run.err.log`: Archivos temporales donde se guardan los mensajes y errores cuando ejecutas el servidor en tu computadora.
+* 📄 `package.json`: Define las dependencias del proyecto (Vue, Vue Router, Pinia, Axios, Bootstrap, etc.) y los scripts de ejecución (dev, build, preview).
+* 📄 `package-lock.json`: Asegura que las instalaciones futuras o en otros entornos utilicen exactamente las mismas versiones de las dependencias definidas.
+* 📄 `vite.config.js`: Configura Vite, el empaquetador y servidor de desarrollo. Incluye configuraciones de proxy para redirigir llamadas de `/api` hacia el backend en desarrollo y la resolución de alias (ej. `@/` hacia `src/`).
+* 📄 `index.html`: Punto de entrada del navegador. Contiene el div con id `app` donde Vue monta toda la jerarquía de componentes dinámicamente.
+* 📄 `.gitignore`: Define exclusiones para el control de versiones (ignora `node_modules`, archivos `.env`, carpetas de build `dist`, etc.).
+* 📄 `README.md`: Documentación base para el desarrollador frontend con comandos esenciales para instalación y despliegue.
 
 ### 📁 `alturas-frontend/public`
-**¿Qué hace esta carpeta?** Guarda archivos públicos que el navegador puede descargar directamente sin que Vue los modifique.
-* 📄 `.htaccess`: Regla para el servidor web Apache. Evita que la página muestre error "404" si el usuario recarga la página estando en una URL como `/reportes`.
-* 📄 `sst-alturas-icon.svg`: Es el logotipo de la aplicación que se muestra en las pestañas del navegador web.
+**Propósito:** Archivos estáticos que no requieren procesamiento por parte de Vite y se sirven directamente desde la raíz web.
+* 📄 `.htaccess`: Configuración de Apache que redirige todas las peticiones a `index.html`, permitiendo que el enrutamiento de Vue Router funcione sin errores 404 al recargar la página.
+* 📄 `sst-alturas-icon.svg`: Favicon e icono principal vectorizado de la aplicación.
 
 ### 📁 `alturas-frontend/src`
-**¿Qué hace esta carpeta?** Aquí está todo el código fuente real que programaste para el frontend.
-* 📄 `main.js`: Es el archivo principal. Vue arranca aquí, lee la configuración, carga las rutas y monta la aplicación en el `index.html`.
-* 📄 `App.vue`: Es el contenedor visual principal. Todos los demás componentes se meten dentro de este "molde".
+**Propósito:** Directorio principal del código fuente (Source) de la aplicación Vue.
+* 📄 `main.js`: Archivo de arranque de Vue. Instancia la aplicación principal, inyecta Vue Router, Pinia (manejo de estado) y monta el componente raíz en el DOM.
+* 📄 `App.vue`: Componente raíz principal que envuelve a todas las vistas mediante `<router-view>` y administra estructuras globales si es necesario.
 
 #### 📁 `alturas-frontend/src/api`
-**¿Qué hace esta carpeta?** Guarda los archivos que se encargan exclusivamente de conectarse a internet para pedirle datos al Backend (usando Axios).
-* 📄 `http.js`: Es el conector maestro. Le pega tu "Token" (pasaporte) a todas las peticiones para demostrar que iniciaste sesión.
-* 📄 `auth.js`: Se encarga de enviar tu usuario y contraseña al backend para iniciar sesión.
-* 📄 `document.js`: Se encarga de enviar los PDFs nuevos al backend y pedir la lista de documentos subidos.
-* 📄 `employee.js`: Se encarga de pedir la lista de trabajadores o guardar uno nuevo.
-* 📄 `employeeHistory.js`: Se encarga de pedir la línea de tiempo de un trabajador específico.
-* 📄 `reports.js`: Se encarga de pedir los datos estadísticos y descargar los excels.
-* 📄 `systemSettings.js`: Se encarga de pedir o guardar la configuración de los correos.
-* 📄 `trainingCertificates.js`: Se encarga de subir o buscar certificados de entrenamiento.
-* 📄 `accessRequest.js`: Se encarga de gestionar los permisos de acceso a las zonas.
+**Propósito:** Capa de servicios REST del frontend. Encapsula las llamadas HTTP usando Axios, separando la lógica de comunicación de red de los componentes visuales.
+* 📄 `http.js`: Instancia configurada de Axios. Intercepta las peticiones salientes para inyectar el token JWT en la cabecera `Authorization` y maneja errores globales (ej. cierre de sesión en 401).
+* 📄 `auth.js`: Peticiones HTTP relacionadas a la autenticación (login, recuperación de contraseña).
+* 📄 `document.js`: Operaciones CRUD sobre documentos. Maneja la subida de archivos (multipart/form-data) y la obtención de listados paginados.
+* 📄 `employee.js`: Llamadas REST para obtener, buscar, crear o actualizar la información de los empleados en base de datos.
+* 📄 `employeeHistory.js`: Recupera la línea de tiempo y trazabilidad de los conceptos (aptitudes médicas/trabajos) de un empleado.
+* 📄 `reports.js`: Se comunica con los endpoints que procesan y devuelven métricas y descargas de reportes en formato CSV/Excel.
+* 📄 `systemSettings.js`: Obtiene y actualiza configuraciones globales del sistema, como parámetros de conexión SMTP.
+* 📄 `trainingCertificates.js`: Endpoints para gestión (subida y consulta) de certificados de entrenamiento y capacitación.
+* 📄 `accessRequest.js`: Manejo de peticiones para permisos y autorizaciones de acceso a zonas específicas.
 
 #### 📁 `alturas-frontend/src/assets`
-**¿Qué hace esta carpeta?** Guarda cosas visuales como imágenes o código de diseño.
-* 📄 `main.css`: Guarda todos los colores, márgenes, tipos de letra y diseños que hacen que la página se vea bonita.
-* 📄 `vue.svg`: Imagen del logo de Vue.
+**Propósito:** Recursos estáticos que sí son procesados por Vite (CSS, fuentes, imágenes locales).
+* 📄 `main.css`: Hoja de estilos global. Define variables CSS, un reset básico y estilos de la aplicación que complementan a las librerías instaladas.
 
 #### 📁 `alturas-frontend/src/components`
-**¿Qué hace esta carpeta?** Guarda pedazos pequeños de interfaz que se pueden usar muchas veces en diferentes pantallas.
-* 📄 `AppNavbar.vue`: Es el código de la barra de navegación lateral y superior (el menú).
-* 📄 `TrainingCertificatesPanel.vue`: Es un cuadrito o panel que se usa para mostrar los certificados de entrenamiento de una persona.
-* 📄 `HelloWorld.vue`: Es un archivo genérico de prueba (se puede borrar).
+**Propósito:** Componentes de Vue reutilizables a lo largo de varias vistas.
+* 📄 `AppNavbar.vue`: Componente estructural de la barra de navegación lateral o superior, implementa enlaces de enrutamiento y opciones de cierre de sesión.
+* 📄 `TrainingCertificatesPanel.vue`: Sub-componente para visualizar y gestionar específicamente la lista de certificados dentro del perfil de un empleado.
+* 📄 `HelloWorld.vue`: Archivo genérico o de demo temporal.
 
 #### 📁 `alturas-frontend/src/layouts`
-**¿Qué hace esta carpeta?** Define las estructuras o "marcos" de la página.
-* 📄 `AppLayout.vue`: Define que el menú siempre va a ir a la izquierda, la barra de usuario arriba, y el contenido en el centro.
+**Propósito:** Componentes contenedores que definen la estructura general de la página (layout).
+* 📄 `AppLayout.vue`: Define el esqueleto de la aplicación post-login, incrustando el `AppNavbar` y un contenedor principal dinámico para el `<router-view>` hijo.
 
 #### 📁 `alturas-frontend/src/router`
-**¿Qué hace esta carpeta?** Define el "GPS" de la aplicación.
-* 📄 `index.js`: Le dice al navegador que si el usuario escribe `/login` muestre la pantalla de Login, y si escribe `/reportes` muestre la de reportes. Además, actúa como guardia de seguridad, impidiendo que usuarios sin sesión entren a las rutas protegidas.
+**Propósito:** Configuración del enrutamiento del lado del cliente (Vue Router).
+* 📄 `index.js`: Define todas las rutas de la aplicación web y asigna los componentes Vista correspondientes. Implementa "Navigation Guards" (`beforeEach`) para proteger rutas privadas si no hay un token válido en sesión.
 
 #### 📁 `alturas-frontend/src/stores`
-**¿Qué hace esta carpeta?** Guarda la memoria temporal del usuario mientras navega.
-* 📄 `auth.js`: Recuerda quién eres, cómo te llamas y qué rol tienes (Ej. Admin) para no tener que preguntarle al backend en cada clic que das.
+**Propósito:** Manejadores de estado global de la aplicación (Pinia).
+* 📄 `auth.js`: Store de autenticación. Guarda en memoria local la información del usuario logueado, su token JWT, sus roles y expone funciones globales para login/logout de forma reactiva.
 
 #### 📁 `alturas-frontend/src/utils`
-**¿Qué hace esta carpeta?** Guarda funciones matemáticas o utilidades pequeñas que ayudan a otras partes del código.
-* 📄 `areaCatalog.js`: Tiene guardada una lista en texto con todas las "zonas" o "áreas" disponibles en la empresa.
-* 📄 `documentUploadHelpers.js`: Tiene matemáticas para calcular cuánto pesan los PDFs y partirlos en grupos de 10 o 20 antes de enviarlos.
-* 📄 `themePreferences.js`: Recuerda si te gusta el modo oscuro o el modo claro en tu pantalla.
+**Propósito:** Funciones y constantes auxiliares, utilerías que no están acopladas a los componentes visuales de Vue.
+* 📄 `areaCatalog.js`: Diccionario estático o catálogo en memoria de las áreas y zonas físicas manejadas en el dominio del negocio.
+* 📄 `documentUploadHelpers.js`: Funciones de lógica de negocio para gestionar pesos, extensiones y lógica de encolamiento al cargar múltiples documentos.
+* 📄 `themePreferences.js`: Script auxiliar para la gestión (lectura y persistencia) de preferencias de interfaz de usuario como el modo claro o modo oscuro.
 
 #### 📁 `alturas-frontend/src/views`
-**¿Qué hace esta carpeta?** Aquí viven todas las "Pantallas completas" del sistema. Cada archivo es una página distinta.
-* 📄 `LoginView.vue`: La pantalla donde pones usuario y clave.
-* 📄 `HomeView.vue`: La pantalla principal de bienvenida.
-* 📄 `DocumentUploadView.vue`: La pantalla donde arrastras y sueltas los archivos PDF para cargarlos.
-* 📄 `ReviewPanelView.vue`: La pantalla donde el "Aprobador" ve los PDF pendientes y les da "Aprobar" o "Rechazar".
-* 📄 `ReportsView.vue`: La pantalla que tiene las tablas y filtros para descargar los Excel.
-* 📄 `SettingsView.vue`: La pantalla gigante de configuración donde creas usuarios y configuras los correos.
-* 📄 `EmployeeListView.vue`: La pantalla que muestra la tabla con todos los trabajadores.
-* 📄 `EmployeeFormView.vue`: La pantalla que tiene los cuadros de texto para crear o editar un trabajador manualmente.
-* 📄 `EmployeeHistoryView.vue`: La pantalla que dibuja la línea de tiempo (historial) de los conceptos de un trabajador.
-* 📄 `DocumentDetailView.vue`: La pantalla para abrir un PDF, leerlo y ver qué datos le sacó el sistema.
-* 📄 `DocumentsListView.vue`: Una tabla gigante que muestra todos los documentos que existen.
-* 📄 `UserAuditView.vue`: La pantalla donde el jefe puede ver "quién hizo qué y a qué hora" (Auditoría).
-* 📄 `UsersView.vue`: Redirige a la pantalla de configuración de usuarios.
-* 📄 `HistoricalImportIssuesView.vue`: Pantalla para resolver problemas si se suben PDFs viejos que no se pudieron leer bien.
-* 📄 `ForgotPasswordView.vue`: Pantalla para pedir recuperar la clave perdida.
-* 📄 `ResetPasswordView.vue`: Pantalla para escribir la clave nueva.
+**Propósito:** Componentes principales que representan páginas completas, cada uno mapeado directamente a una ruta de navegación web.
+* 📄 `LoginView.vue`: Interfaz de inicio de sesión de usuario y manejo de errores de autenticación con el servidor.
+* 📄 `HomeView.vue`: Panel de inicio principal (Dashboard) que se presenta tras ingresar exitosamente.
+* 📄 `DocumentUploadView.vue`: Interfaz interactiva para recepción de arrastrar-y-soltar (Drag&Drop), pre-visualización local y envío en masa de archivos PDF de los trabajadores.
+* 📄 `ReviewPanelView.vue`: Panel del Rol Aprobador para auditar los documentos extraídos por el sistema y cambiar su estado entre "Aprobar" o "Rechazar", con visualización contextual.
+* 📄 `ReportsView.vue`: Consola analítica que expone vistas tabulares y descargas de consolidado de excel a través de reportes parametrizables.
+* 📄 `SettingsView.vue`: Panel para ajustar la configuración central de la app, correos, y acceder a configuraciones de sub-catálogos.
+* 📄 `EmployeeListView.vue`: Pantalla con el listado tabular (DataGrid) central, ofreciendo filtros complejos sobre todos los perfiles de los trabajadores.
+* 📄 `EmployeeFormView.vue`: Formulario extenso que captura o actualiza todos los datos demográficos y específicos de la ficha de un empleado.
+* 📄 `EmployeeHistoryView.vue`: Línea de tiempo visual y listado que audita todo el progreso médico y documental de un empleado en particular.
+* 📄 `DocumentDetailView.vue`: Vista para inspeccionar a fondo un `ManagedDocument` específico y visualizar datos de los motores de PDF.
+* 📄 `DocumentsListView.vue`: Lista maestra de todos los documentos en el sistema con atajos para ver o eliminar según los roles asignados.
+* 📄 `UserAuditView.vue`: Visor para que un Administrador lea todas las bitácoras o transacciones registradas del sistema operativo sobre los usuarios.
+* 📄 `UsersView.vue`: Vista dedicada a gestionar (Crear, Editar, Borrar y Resetear Claves) a los operarios y aprobadores del sistema.
+* 📄 `HistoricalImportIssuesView.vue`: Consola de solución de problemas para atender a los documentos que fallaron su importación original debido a formatos inválidos o errores del OCR.
+* 📄 `ForgotPasswordView.vue`: Interfaz para ingresar un correo electrónico e iniciar la recuperación de contraseñas.
+* 📄 `ResetPasswordView.vue`: Interfaz de formulario validado para confirmar y establecer la contraseña final desde el proceso de reseteo.
 
 ---
 
 ## 2. ⚙️ ALTURAS-BACKEND
-**¿Qué hace esta carpeta?** Es el cerebro de la operación (El Servidor Java). Se encarga de guardar los datos, leer los PDFs y enviar correos.
+**Propósito:** Servidor y API RESTful construido en Java con Spring Boot. Gestiona la lógica de negocio, procesamiento de PDFs (OCR), seguridad por JWT, envío de correos SMTP y persistencia en base de datos NoSQL.
 
-* 📄 `pom.xml`: Es la lista de mercado del backend. Le dice a Maven qué librerías descargar (como Spring Boot, MongoDB y PDFBox).
-* 📄 `mvnw` y `mvnw.cmd`: Son scripts que te permiten ejecutar el backend aunque no tengas Maven instalado en tu PC.
-* 📄 `.gitignore`: Le dice a Git que ignore la carpeta `target` donde se compila el Java.
+* 📄 `pom.xml`: Project Object Model de Maven. Define dependencias de Spring Boot, librerías de procesamiento PDF (Apache PDFBox), conectores a MongoDB (spring-boot-starter-data-mongodb) y utilidades como Lombok y JSON Web Token.
+* 📄 `mvnw` / `mvnw.cmd`: Wrapper de Maven. Permite compilar y ejecutar el proyecto sin requerir instalación manual de Apache Maven en el entorno del sistema operativo.
+* 📄 `.gitignore`: Reglas para omitir compilados (`target/`) e IDE metadata de Git.
 
 ### 📁 `alturas-backend/src/main/resources`
-**¿Qué hace esta carpeta?** Guarda propiedades del servidor.
-* 📄 `application.properties`: Es la configuración vital del servidor. Le dice a Java en qué puerto arrancar (8081), la IP de la base de datos MongoDB, y las credenciales del servidor de correos (10.1.200.20).
+**Propósito:** Archivos de propiedades y recursos empaquetados junto a la aplicación Java.
+* 📄 `application.properties`: Configuraciones medulares del entorno, incluyendo variables de red (puerto 8081), URIs y configuraciones de pool de conexiones para MongoDB, e inicialización paramétrica de Mail.
 
 ### 📁 `alturas-backend/src/main/java/com/backend`
-**¿Qué hace esta carpeta?** Contiene todo el código Java escrito.
-* 📄 `BackendApplication.java`: Es el interruptor principal. Cuando lo ejecutas, enciende todo el servidor de Spring Boot.
+* 📄 `BackendApplication.java`: Clase principal con la anotación `@SpringBootApplication`. Arranca el contexto interno de Spring, inicia el Tomcat embebido y dispara el inicio del ciclo de vida de la API.
 
 #### 📁 `alturas-backend/src/main/java/com/backend/config`
-**¿Qué hace esta carpeta?** Configuraciones iniciales del sistema.
-* 📄 `CorsConfig.java`: Le dice al servidor que confíe en el Frontend (puerto 5173) y le permita conectarse.
-* 📄 `DataSeeder.java`: Cuando el servidor prende, revisa si hay usuarios. Si no hay ninguno, este archivo crea el usuario "admin" mágicamente para que no te quedes por fuera.
-* 📄 `MongoConfig.java`: Configura detalles técnicos de cómo Java se conecta a MongoDB.
+**Propósito:** Clases marcadas con `@Configuration` para inicialización de beans y configuraciones técnicas transversales.
+* 📄 `CorsConfig.java`: Configura las políticas de control de acceso HTTP (CORS), habilitando específicamente métodos y encabezados para permitir las comunicaciones cruzadas desde el cliente en el puerto de Vue.
+* 📄 `DataSeeder.java`: Componente `CommandLineRunner` que entra en acción solo al arrancar. Escanea si el sistema es "virgen" sin usuarios y crea un usuario Administrador (Seed) con contraseña predeterminada para evitar bloqueos del sistema.
+* 📄 `MongoConfig.java`: Ajustes adicionales explícitos sobre las conexiones para Spring Data MongoDB, incluyendo conversiones o control de transacciones.
 
 #### 📁 `alturas-backend/src/main/java/com/backend/security`
-**¿Qué hace esta carpeta?** Los guardias de seguridad del servidor.
-* 📄 `SecurityConfig.java`: Es el policía de las URLs. Revisa las rutas y dice "a /api/documents entra el Operador, a /api/settings entra el Admin, a las demás nadie entra sin llave".
-* 📄 `JwtTokenProvider.java`: Se encarga de fabricar la "llave" (Token) cuando alguien inicia sesión correctamente.
-* 📄 `JwtTokenFilter.java`: Revisa la llave en cada petición que llega para ver si es falsa o si ya caducó.
-* 📄 `CustomUserDetailsService.java`: Busca tu usuario en la base de datos para ver si de verdad existes antes de dejarte entrar.
+**Propósito:** Interceptores basados en Spring Security que aplican reglas estrictas de autorización de rutas y criptografía de identidades.
+* 📄 `SecurityConfig.java`: Establece qué rutas de la API son públicas (ej. login) y cuáles exigen JWT u observancia de roles (`ROLE_ADMIN` / `ROLE_OPERATOR`), mientras desactiva protecciones estado-orientadas (CSRF y Session) propias de aplicaciones web monolíticas.
+* 📄 `JwtService.java`: El motor criptográfico. Compone JSON Web Tokens asignándoles fecha de expiración, inyecta roles/claims y los firma. También revierte el proceso validando firmas criptográficas en las peticiones entrantes.
+* 📄 `JwtAuthFilter.java`: El centinela principal por cada Request HTTP. Detecta el Header `Authorization: Bearer <token>`, extrae la identificación, usa `JwtService` para validarla y autoriza a Spring a conceder el paso hacia el Controlador.
 
 #### 📁 `alturas-backend/src/main/java/com/backend/controller`
-**¿Qué hace esta carpeta?** Son las puertas del servidor. Reciben las llamadas de internet (del frontend) y las envían a los servicios.
-* 📄 `AuthController.java`: Recibe tu usuario y contraseña cuando le das a "Ingresar".
-* 📄 `DocumentController.java`: Recibe los PDFs que subes y los envía a procesar.
-* 📄 `DocumentBatchController.java`: Controla el progreso cuando subes 100 PDFs al mismo tiempo.
-* 📄 `EmployeeController.java`: Recibe peticiones de "muéstrame a los trabajadores" o "crea este trabajador".
-* 📄 `ReportController.java`: Recibe la orden de fabricar el archivo CSV y te lo devuelve para que lo descargues.
-* 📄 `UserController.java`: Recibe peticiones para crear o borrar usuarios del sistema.
-* 📄 `SystemSettingsController.java`: Recibe la configuración de los correos que cambias desde la pantalla de Ajustes.
-* 📄 `TrainingCertificateController.java`: Recibe certificados de formación.
-* 📄 `AccessRequestController.java`: Recibe solicitudes para permisos en zonas.
+**Propósito:** Capa superior de exposición de la API REST. Contiene las anotaciones `@RestController`. Aquí se reciben las llamadas HTTP (GET, POST), se parsean los parámetros (DTOs, Params), se enruta a la capa lógica (`Service`) y se serializa la respuesta JSON devuelta.
+* 📄 `AuthController.java`: Expone `/api/auth`. Valida y emite los JWT.
+* 📄 `DocumentController.java`: Interfaz pública para gestionar, actualizar o leer los documentos PDF guardados (`ManagedDocument`). Soporta carga "Multipart".
+* 📄 `DocumentBatchController.java`: Aceleradores REST optimizados para la subida asíncrona de lotes masivos de archivos desde la vista de importación masiva del cliente.
+* 📄 `EmployeeController.java`: Endpoints para las búsquedas (querying) y las mutaciones (crear/actualizar) de trabajadores en la plataforma.
+* 📄 `EmployeeHistoryController.java`: Devuelve cronologías de actualizaciones, útil para trazar el histórico documental de una persona.
+* 📄 `ReportController.java`: Gatilla las tareas de volcado y agregación devolviendo encabezados de tipo octet-stream para que el navegador descargue ficheros Excel/CSV.
+* 📄 `UserController.java`: Abstracción para dar control del CRUD de cuentas a los perfiles de administradores (solo a estos roles).
+* 📄 `SystemSettingsController.java`: Permite obtener o guardar propiedades configurables de red (e.g. SMTP) a persistencia dinámica sin reiniciar Java.
+* 📄 `TrainingCertificateController.java`: Acepta flujos de subida de PDF específicamente orientados a cursos y entrenamientos en alturas.
+* 📄 `AccessRequestController.java`: Administra el flujo de negocio sobre "solicitudes de acceso físico", capturando cuándo, quién y a dónde se solicita el permiso.
+* 📄 `AuditLogController.java`: API para paginar los registros forenses insertados por la herramienta de Auditoría y llevarlos a los data-tables.
+* 📄 `EmailLogController.java`: Controlador que reporta los errores o bitácoras específicas sobre transacciones fallidas en las notificaciones del host de correo.
+* 📄 `SpaForwardController.java`: Captura cualquier petición que no inicie con `/api/` en Tomcat y la responde con el `index.html` de Vue para que el SPA enrutamiento no marque errores 404.
 
 #### 📁 `alturas-backend/src/main/java/com/backend/service`
-**¿Qué hace esta carpeta?** Es el **CORAZÓN MATEMÁTICO Y LÓGICO** de la app. Hacen todo el trabajo pesado.
-* 📄 `PdfTextExtractorService.java`: Usa la librería PDFBox para abrir tu PDF, extraer todo el texto que tiene adentro y buscar la Cédula y si dice "APTO".
-* 📄 `PdfFieldParserService.java`: Trabaja con el anterior. Recorta los textos feos y los limpia para guardar solo los nombres y números puros.
-* 📄 `DocumentService.java`: Toma lo que leyó el extractor de PDFs, crea el documento en base de datos como "Pendiente" y luego permite cambiarlo a "Aprobado".
-* 📄 `EmailSendService.java`: Toma el servidor de correos (EBSA) y envía el mensaje final al Aprobador.
-* 📄 `DocumentEmailTemplateService.java`: Le pone colores bonitos (HTML) al correo antes de enviarlo.
-* 📄 `AuthService.java`: Revisa si la contraseña que pusiste es correcta comparándola con la encriptada en la BD.
-* 📄 `UserService.java`: Registra usuarios nuevos y se asegura de que no se repitan los correos.
-* 📄 `AuditLogService.java` y `UserAuditLogService.java`: Anotan silenciosamente en la BD todo lo que hacen los usuarios (Ej. "Admin borró al empleado X").
-* 📄 `EmployeeService.java` y `EmployeeHistoryService.java`: Crean empleados nuevos y actualizan su historial cada vez que se aprueba un PDF.
-* 📄 `ApprovedExportService.java` y `ConsolidatedExportService.java`: Fabrican las tablas de Excel (CSV) reuniendo toda la información de la base de datos.
-* 📄 `SystemSettingsService.java`: Revisa que la configuración de correos sea correcta y la guarda.
-* 📄 `DocumentBatchService.java`, `DocumentBatchFacadeService.java`: Organizan y agilizan la subida masiva de archivos.
-* 📄 `TrainingCertificateService.java` y `UserAccessEvaluator.java`: Validan lógicas secundarias de certificados y accesos.
+**Propósito:** El "cerebro" o la lógica empresarial profunda. Orquesta las bases de datos (Repositories), algoritmos complejos o librerías ajenas a Spring y garantiza transaccionalidad de negocio.
+* 📄 `CustomUserDetailsService.java`: Puente requerido por Spring Security para buscar y encapsular un usuario MongoDB dentro del objeto de sesión `UserDetails` del marco Spring.
+* 📄 `PdfTextExtractorService.java`: Instancia motores de `Apache PDFBox` para el procesamiento binario de PDFs leídos en Stream, recorre páginas y convierte información vectorial en un enorme texto crudo (String) escaneable.
+* 📄 `PdfFieldParserService.java`: Analizador algorítmico y motor de Expresiones Regulares (Regex). Identifica patrones lingüísticos para deducir qué parte del texto de un documento corresponde a Cédulas, a Nombres o a diagnósticos médicos como "APTO".
+* 📄 `DocumentAnalysisService.java`: Coordina a Extractor y Parser para aplicar un veredicto o filtro de calificación sobre el documento analizado de acuerdo a reglas de integridad de negocio.
+* 📄 `DocumentService.java`: El orquestador del ciclo de vida del Documento. Se encarga de guardarlo en estado "PENDING", o de cambiarlo a "APPROVED" lo que en cascada requiere llamadas a EmployeeService para actualizar al trabajador.
+* 📄 `DocumentReportPdfService.java`: Constructor de nuevos PDF's programáticos. Utiliza librerías para ensamblar informes y plantillas tabulares exportables a archivo desde la data.
+* 📄 `EmailSendService.java`: Emplea la librería de envío de correos (JavaMail) configurada desde la base de datos para intentar la comunicación de red SMTP y despachar las alertas a destinatarios y aprobadores.
+* 📄 `DocumentEmailTemplateService.java`: Constructor de plantillas de HTML. Mezcla datos estáticos y dinámicos para formatear mensajes legibles con los logos de la institución.
+* 📄 `AuthService.java`: Abstracción de reglas de autenticación, verificación de hashing (`BCrypt`) y generación de tokens que usa el controlador.
+* 📄 `UserService.java`: Servicio CRUD transaccional con reglas rígidas como impedir la creación de usuarios o correos duplicados.
+* 📄 `AuditLogService.java` y `UserAuditLogService.java`: Sistemas asíncronos que insertan trazas perennes en la base de datos ante cambios de estado de otras entidades.
+* 📄 `EmployeeService.java` y `EmployeeHistoryService.java`: Controla el demográfico maestro y dispara las grabaciones o "Snapshots" temporales de la línea de tiempo de eventos cada vez que apruebas un proceso a un empleado.
+* 📄 `ReportService.java`: Utiliza abstracciones agregadas desde MongoDB u otros servicios para consolidar arrays y datos estadísticos para los dashboards.
+* 📄 `ApprovedExportService.java` y `ConsolidatedExportService.java`: Algoritmos que leen todo el corpus documental base para concatenar archivos en CSV delimitado.
+* 📄 `SystemSettingsService.java`: Abstracción de control y guardado de ajustes técnicos para evitar malformación en configuraciones del sistema en ejecución.
+* 📄 `DocumentBatchService.java`, `DocumentBatchFacadeService.java`: Gestión de concurrencia e hilos para importaciones múltiples controlando fallos parciales sin caer la petición web total.
+* 📄 `TrainingCertificateService.java` y `UserAccessEvaluator.java`: Interpreta las constancias y algoritmos que validan requerimientos duros para aprobar que un empleado ingrese a determinada zona.
+* 📄 `AccessRequestService.java` y `AccessScopeService.java`: Validación, transaccionalidad e historización de todos los permisos y ámbitos o rangos geográficos.
 
 #### 📁 `alturas-backend/src/main/java/com/backend/model`
-**¿Qué hace esta carpeta?** Define las tablas o "moldes" que se guardarán en MongoDB.
-* 📄 `User.java`: El molde de un Usuario (tiene nombre, clave, rol).
-* 📄 `Employee.java`: El molde de un Trabajador (tiene nombre, cédula, zona).
-* 📄 `ManagedDocument.java`: El molde de un PDF procesado (tiene ruta, estado "APROBADO" o "PENDIENTE").
-* 📄 `Role.java`: Define qué puede y qué no puede hacer cada tipo de persona.
-* 📄 `SystemSettings.java`, `UserAuditLog.java`, `EmployeeHistory.java`, etc.: Moldes para configuraciones, auditoría y el historial.
+**Propósito:** POJOs (Plain Old Java Objects) mapeados por la especificación Spring Data `@Document`. Representan las entidades semánticas y estructuras exactas de las colecciones BSON de MongoDB.
+* 📄 `User.java`: Entidad `users`. Almacena la contraseña hasheada y asignación de rol (`Role.java`).
+* 📄 `Employee.java`: Entidad `employees`. Mantiene el estado consolidado y más reciente sobre la aptitud del trabajador frente al riesgo en alturas.
+* 📄 `ManagedDocument.java`: Entidad `managed_documents`. Representa archivos procesados por OCR indicando ubicación física (path) y la etapa actual del flujo de aprobación.
+* 📄 `Role.java`: Elemento que centraliza la seguridad tipificada.
+* 📄 `SystemSettings.java`, `UserAuditLog.java`, `EmployeeHistory.java`, etc.: Equivalen al modelo físico para las otras colecciones descritas en servicios.
 
 #### 📁 `alturas-backend/src/main/java/com/backend/repository`
-**¿Qué hace esta carpeta?** Se conecta físicamente con la base de datos MongoDB para hacer `INSERT`, `SELECT`, `UPDATE` o `DELETE`.
-* 📄 `UserRepository.java`: Busca usuarios en MongoDB por su email.
-* 📄 `EmployeeRepository.java`: Busca trabajadores en MongoDB por su cédula.
-* 📄 `DocumentRepository.java`: Busca todos los documentos que estén "PENDING_REVIEW" para mostrárselos al aprobador.
-* (Y otros archivos iguales para cada modelo: `AuditLogRepository.java`, `SystemSettingsRepository.java`, etc).
+**Propósito:** Capa de abstracción y de acceso a la capa física de MongoDB (Data Access Object - DAO). Extendiendo `MongoRepository`, Spring Boot autogenera las consultas a nivel infraestructura durante tiempo de compilación.
+* 📄 `UserRepository.java`: Genera `db.users.find()` por atributos como `email`.
+* 📄 `EmployeeRepository.java`: Consultas complejas para recuperación o validación sobre `identificacionNumber`.
+* 📄 `DocumentRepository.java`: Busca lotes de documentos paginados agrupados por `status`.
+* (Otras interfaces homólogas controlan el resto de los modelos mencionados).
 
 #### 📁 `alturas-backend/src/main/java/com/backend/dto`
-**¿Qué hace esta carpeta?** Archivos temporales (mensajeros) que llevan datos de una capa a otra sin exponer la base de datos real.
-* 📄 Ejemplos: `LoginRequest.java` (solo lleva correo y clave), `EmployeeResponse.java` (lleva el empleado pero sin datos sensibles).
+**Propósito:** Clases sin lógica (Data Transfer Objects) dedicadas exclusivamente a estandarizar y modelar la estructura JSON enviada (Request) y recibida (Response) desde el cliente HTTP, actuando como escudo protector sobre el modelo real de Base de Datos.
+* 📄 Ejemplos: `LoginRequest.java` (Correo y Pass limpios), `EmployeeResponse.java` (Entidad saneada ocultando campos técnicos inútiles a la interfaz), o proyecciones compuestas para APIs complejas.
 
 #### 📁 `alturas-backend/src/main/java/com/backend/exception`
-**¿Qué hace esta carpeta?** Maneja cuando el sistema se rompe o algo sale mal.
-* 📄 `GlobalExceptionHandler.java`: Atrapa los errores (Ej. "Contraseña incorrecta") y le envía al frontend un mensaje bonito en lugar de un código de error feo.
+**Propósito:** Centralización del manejo de códigos de errores HTTP, envoltura segura de "StackTrace" caóticos.
+* 📄 `GlobalExceptionHandler.java`: Un controlador de tipo `@ControllerAdvice` que vigila todo el ciclo. Captura excepciones de negocio o java nativo e interrumpe construyendo una respuesta JSON con formato único, mensajes predecibles y códigos como 404, 401 o 500 para el cliente de Vue.
 
 ### 📁 `alturas-backend/src/test`
-**¿Qué hace esta carpeta?** Pruebas de calidad del código hechas por los programadores.
-* 📄 `BackendApplicationTests.java`: Prueba que el servidor al menos logre encender sin estrellarse.
-* 📄 `PdfFieldParserServiceTest.java`: Prueba que el extractor de PDFs siga sabiendo leer cédulas sin fallar.
-* 📄 `UserAuditLogServiceTest.java`: Prueba que la auditoría sí esté grabando los movimientos.
+**Propósito:** Archivos diseñados con librerías JUnit, Mockito o SpringBootTest para emulación automatizada de las funciones lógicas, permitiendo al desarrollador evaluar y comprobar el código sin ejecutar Tomcat.
+* 📄 `BackendApplicationTests.java`: Asegura que toda la inyección de dependencias cargue sin conflictos irresolubles en memoria.
+* 📄 `PdfFieldParserServiceTest.java`: Pruebas intensivas automatizadas al extractor Regex contra múltiples escenarios de texto de cédulas o diagnósticos fallidos.
+* 📄 `UserAuditLogServiceTest.java`: Validaciones de inserciones correctas usando simuladores.
 
 ---
 
 ## 3. ¿CÓMO TRABAJA LA BASE DE DATOS MONGODB? (De Inicio a Fin)
-La base de datos (MongoDB) es el disco duro de la aplicación. Trabaja con Colecciones (que son como tablas). Así fluye todo:
+El flujo transaccional y el ciclo de vida de los datos a través de las colecciones BSON NoSQL es el siguiente:
 
-1. **El Inicio:** Todo arranca en la colección `users` y `system_settings`. El sistema revisa que el administrador exista y carga las reglas de correos.
-2. **La Subida del PDF:** El Operador sube un PDF. Inmediatamente el backend inyecta en la colección `managed_documents` un registro con el PDF en estado `PENDING_REVIEW`. Al mismo tiempo, en la colección `employees` se crea al empleado si es que no existía.
-3. **La Auditoría:** Cada paso de la subida inyecta un texto en `user_audit_logs` diciendo "Operador subió un documento".
-4. **La Aprobación:** El Aprobador da clic en "Aprobar". El backend busca ese registro en `managed_documents` y le cambia la palabra a `APPROVED`. 
-5. **El Historial:** Para que quede evidencia, se crea un registro en `employee_history` (una foto de cómo estaba el trabajador ese día). Y se anota en `email_logs` si se logró enviar el correo al jefe o no.
-6. **Los Reportes:** Al dar click en "Descargar Excel", el sistema lee todos los `managed_documents` que estén en `APPROVED`, los cruza con `employees` y fabrica tu archivo final.
+1. **Bootstrap (Inicialización):** Al arrancar el servidor en frío, Spring Data evalúa `system_settings` y `users`. Si se trata de un entorno limpio o de primera ejecución, el `DataSeeder` insertará automáticamente y con encriptación la cuenta Administrador (Seed) al sistema para prevenir interrupción de servicios y habilitar configuración inicial de reglas de correo en `system_settings`.
+2. **Recepción del Archivo (Operadores):** Tras login en el Frontend, el componente `DocumentUploadView` envía los Multipart en el Request HTTP. El controlador direcciona a los Servicios correspondientes quienes implementan `PDFBox` para efectuar un reconocimiento avanzado extra-texto, aislando metadatos de los empleados (identidad y aptitud).
+3. **Persistencia Inicial Desacoplada:** Tras extraer la información exitosamente, la base de datos inserta en `managed_documents` un registro con el estado `PENDING_REVIEW`, ligándolo al documento. En paralelo, busca al usuario en la colección `employees`; si este es nuevo lo inserta, si ya existe solo lo asocia al documento. El estado o aptitud del empleado **no** se modifica en esta fase para garantizar seguridad documental.
+4. **Auditoría Transaccional Continua:** Durante los procesos antes mencionados, por cada método ejecutado en el backend, los servicios asíncronos guardan información en la colección `user_audit_logs` que traza exactamente qué Usuario hizo cada modificación, manteniendo inmutabilidad de logs.
+5. **Revisión Final y Autorización (Aprobadores):** Cuando un usuario Aprobador carga su respectivo panel del Dashboard, el backend busca en base de datos todos los documentos en `PENDING_REVIEW`. Al confirmar uno de ellos, actualiza directamente la tupla de `managed_documents` transaccionando hacia `APPROVED`.
+6. **Desencadenamiento de Historial:** Al confirmarse la validez oficial de un PDF con la aprobación, el backend finalmente insertará o actualizará la entidad base del trabajador referenciado en `employees`, reflejando la aptitud de trabajo y la respectiva vigencia. Simultáneamente creará una "Snapshot" histórica insertada en `employee_history` donde quedará registrada de por vida esta evolución. Como etapa final se inician los envíos vía SMTP mediante colas y plantillas estáticas registrando una entrada de diagnóstico en `email_logs`.
+7. **Motor de Exportación Tabular:** A solicitud explícita del frontend desde los dashboards para descargar matrices de información, el servidor proyecta de forma filtrada colecciones interconectadas como lo son `managed_documents` que se hallen en validación de `APPROVED` uniéndolas a entidades completas de `employees`. Ensambla toda esta información para escupir directamente al Stream del `ReportController` el documento `csv/excel` que consume el usuario sin carga para la base de datos.

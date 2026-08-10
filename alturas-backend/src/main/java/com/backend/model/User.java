@@ -43,6 +43,9 @@ public class User {
     private String updatedBy;
     private String enabledChangedBy;
     private LocalDateTime enabledChangedAt;
+    
+    private LocalDateTime lastLoginAt;
+    private boolean mustChangePassword = false;
 
     @CreatedDate
     private LocalDateTime createdAt;
@@ -188,5 +191,21 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }

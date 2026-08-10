@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: light;
   --page-bg: #f7f8f9;
   --surface: #ffffff;
@@ -27,7 +27,7 @@
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 22px;
-  --sidebar-width: 280px;
+  --sidebar-width: 240px;
 }
 
 :root[data-theme='dark'] {
@@ -1159,3 +1159,9 @@ textarea.form-control {
     padding: 0.85rem !important;
   }
 }
+
+.dark-theme-logo { display: none; }
+:root[data-theme='dark'] .light-theme-logo { display: none; }
+:root[data-theme='dark'] .dark-theme-logo { display: block; }
+
+.text-muted { color: var(--text-muted) !important; }

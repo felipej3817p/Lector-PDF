@@ -31,6 +31,9 @@ public class UserDto {
     private String updatedBy;
     private String enabledChangedBy;
     private LocalDateTime enabledChangedAt;
+    
+    private LocalDateTime lastLoginAt;
+    private boolean mustChangePassword;
 
     public UserDto() {
     }
@@ -53,7 +56,9 @@ public class UserDto {
             String createdBy,
             String updatedBy,
             String enabledChangedBy,
-            LocalDateTime enabledChangedAt
+            LocalDateTime enabledChangedAt,
+            LocalDateTime lastLoginAt,
+            boolean mustChangePassword
     ) {
         this.id = id;
         this.username = username;
@@ -73,6 +78,8 @@ public class UserDto {
         this.updatedBy = updatedBy;
         this.enabledChangedBy = enabledChangedBy;
         this.enabledChangedAt = enabledChangedAt;
+        this.lastLoginAt = lastLoginAt;
+        this.mustChangePassword = mustChangePassword;
     }
 
     public String getId() {
@@ -147,6 +154,22 @@ public class UserDto {
     public void setEnabledChangedBy(String enabledChangedBy) { this.enabledChangedBy = enabledChangedBy; }
     public LocalDateTime getEnabledChangedAt() { return enabledChangedAt; }
     public void setEnabledChangedAt(LocalDateTime enabledChangedAt) { this.enabledChangedAt = enabledChangedAt; }
+
+    public LocalDateTime getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
+    }
 
     public void setAccountExpirationDate(LocalDateTime accountExpirationDate) {
         this.accountExpirationDate = accountExpirationDate;

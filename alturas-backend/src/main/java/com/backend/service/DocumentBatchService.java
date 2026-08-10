@@ -8,6 +8,7 @@ import com.backend.model.DocumentBatch;
 import com.backend.repository.EmployeeRepository;
 import com.backend.repository.HistoricalImportIssueRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -71,6 +72,7 @@ public class DocumentBatchService {
     private final DocumentBatchFacadeService batchFacadeService;
     private final EmailSendService emailSendService;
     private final HistoricalImportIssueRepository historicalImportIssueRepository;
+    private final TrainingCertificateService trainingCertificateService;
 
     @Value("${app.storage.historical-issues-dir:uploads/historical-issues}")
     private String historicalIssuesDir;
@@ -83,7 +85,8 @@ public class DocumentBatchService {
             PdfFieldParserService pdfFieldParserService,
             DocumentBatchFacadeService batchFacadeService,
             EmailSendService emailSendService,
-            HistoricalImportIssueRepository historicalImportIssueRepository) {
+            HistoricalImportIssueRepository historicalImportIssueRepository,
+            @Lazy TrainingCertificateService trainingCertificateService) {
         this.employeeRepository = employeeRepository;
         this.documentService = documentService;
         this.documentAnalysisService = documentAnalysisService;
@@ -92,6 +95,7 @@ public class DocumentBatchService {
         this.batchFacadeService = batchFacadeService;
         this.emailSendService = emailSendService;
         this.historicalImportIssueRepository = historicalImportIssueRepository;
+        this.trainingCertificateService = trainingCertificateService;
     }
 
     public Map<String, Object> uploadAndAnalyze(
@@ -99,7 +103,7 @@ public class DocumentBatchService {
             String documentType,
             String examType,
             String uploadedBy) {
-        return uploadAndAnalyze(files, documentType, examType, uploadedBy, false);
+        return uploadAndAnalyze(files, documentType, examType, uploadedBy, "REGULAR");
     }
 
     public Map<String, Object> uploadAndAnalyze(
@@ -107,8 +111,9 @@ public class DocumentBatchService {
             String documentType,
             String examType,
             String uploadedBy,
-            boolean historical) {
+            String uploadType) {
         List<Map<String, Object>> results = new ArrayList<>();
+        boolean historical = "HISTORICAL".equals(uploadType);
         boolean storageOnly = false;
 
         DocumentBatch batch = batchFacadeService.createBatch(
@@ -128,7 +133,7 @@ public class DocumentBatchService {
                     uploadedBy,
                     batch.getId(),
                     batch.getBatchCode(),
-                    historical,
+                    uploadType,
                     storageOnly));
         }
 
@@ -195,7 +200,7 @@ public class DocumentBatchService {
             String uploadedBy,
             String batchId,
             String batchCode,
-            boolean historical,
+            String uploadType,
             boolean storageOnly) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("fileName", file != null ? file.getOriginalFilename() : "");
@@ -204,28 +209,61 @@ public class DocumentBatchService {
         String birthDate = "";
         LocalDate fechaConcepto = null;
 
+        boolean historical = "HISTORICAL".equals(uploadType);
+        boolean isConstancia = "CONSTANCIA".equals(uploadType);
+
         try {
             validateFile(file);
 
             Map<String, Object> extractedFields = extractIdentityFields(file);
             documentNumber = normalizeDocumentNumber(extractedFields.getOrDefault("documentNumber", ""));
             patientName = safe(String.valueOf(extractedFields.getOrDefault("patientName", "")));
-            birthDate = safe(String.valueOf(extractedFields.getOrDefault("birthDate", "")));
-            fechaConcepto = resolveFechaConcepto(extractedFields);
+
+            if (isConstancia) {
+                if (documentNumber.isBlank()) {
+                    String originalFilename = file != null ? file.getOriginalFilename() : "";
+                    if (originalFilename != null) {
+                        documentNumber = originalFilename.replaceAll("(?i)\\.pdf$", "").replaceAll("[^0-9]", "");
+                    }
+                }
+            } else {
+                birthDate = safe(String.valueOf(extractedFields.getOrDefault("birthDate", "")));
+                fechaConcepto = resolveFechaConcepto(extractedFields);
+            }
 
             if (documentNumber.isBlank()) {
-                throw new IllegalArgumentException("No se pudo leer la cedula en el PDF"
+                throw new IllegalArgumentException("No se pudo extraer la cedula del PDF"
                         + (!patientName.isBlank() ? " de " + patientName : "")
                         + ". El archivo se omitio y la carga continua.");
             }
 
             final String resolvedName = patientName;
             final String resolvedDoc = documentNumber;
-            Employee employee = resolveEmployee(resolvedDoc, resolvedName, historical)
+            Employee employee = resolveEmployee(resolvedDoc, resolvedName, historical || isConstancia)
                     .orElseThrow(() -> new IllegalArgumentException(
                             "No se encontro trabajador para documento " + resolvedDoc
                                     + (!resolvedName.isBlank() ? " / nombre " + resolvedName : "")
                                     + ". El archivo se omitio y la carga continua."));
+
+            if (isConstancia) {
+                trainingCertificateService.uploadCertificate(employee.getId(), file);
+
+                item.put("status", "OK");
+                item.put("message", "Constancia cargada correctamente.");
+                item.put("documentId", "");
+                item.put("employeeId", employee.getId());
+                item.put("employeeName", buildEmployeeName(employee));
+                item.put("employeeDocument", documentNumber);
+                item.put("areaCode", employee.getAreaCode() != null ? employee.getAreaCode().name() : "");
+                item.put("fechaEvaluacion", null);
+                item.put("evaluationDate", null);
+                item.put("birthDate", "");
+                item.put("fechaNacimiento", "");
+                item.put("resultStatus", "");
+                item.put("reviewStatus", "");
+                item.put("notificationStatus", "");
+                return item;
+            }
 
             ManagedDocument saved = documentService.uploadDocument(
                     employee.getId(),
@@ -303,8 +341,8 @@ public class DocumentBatchService {
             item.put("reviewStatus", "");
             item.put("notificationStatus", "");
 
-            if (historical) {
-                saveHistoricalIssue(batchId, batchCode, item, documentNumber, patientName, message, uploadedBy, file);
+            if (historical || isConstancia) {
+                saveHistoricalIssue(batchId, batchCode, item, documentNumber, patientName, message, uploadedBy, file, uploadType);
             }
         }
 
@@ -397,7 +435,8 @@ public class DocumentBatchService {
             String patientName,
             String message,
             String uploadedBy,
-            MultipartFile file) {
+            MultipartFile file,
+            String uploadType) {
         HistoricalImportIssue issue = new HistoricalImportIssue();
         issue.setBatchId(batchId);
         issue.setBatchCode(batchCode);
@@ -413,6 +452,7 @@ public class DocumentBatchService {
         issue.setUploadedBy(uploadedBy);
         issue.setCreatedAt(LocalDateTime.now());
         issue.setStatus("PENDING");
+        issue.setUploadType(uploadType);
         historicalImportIssueRepository.save(issue);
     }
 

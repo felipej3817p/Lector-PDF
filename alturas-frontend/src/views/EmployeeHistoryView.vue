@@ -38,7 +38,7 @@
               <p class="helper-text mb-0">
                 {{ employeeDocumentLabel }}
                 <span v-if="employeePosition"> · {{ employeePosition }}</span>
-                <span v-if="employeeZone"> · {{ employeeZone }}</span>
+                <span v-if="employeeAreaCode"> · {{ employeeAreaCode }}</span>
               </p>
             </div>
 
@@ -264,11 +264,11 @@
                           </button>
 
                           <button
-                            v-if="canAnalyzeHistoricalResult && item.historical && item.resultStatus === 'PENDIENTE'"
+                            v-if="canAnalyzeHistoricalResult"
                             type="button"
                             @click="analyzeHistoricalResult(item)"
                           >
-                            Evaluar resultado
+                            Reevaluar documento
                           </button>
 
                           <button
@@ -451,9 +451,11 @@ import { getEmployeeHistory } from '../api/employeeHistory'
 import http from '../api/http'
 import TrainingCertificatesPanel from '../components/TrainingCertificatesPanel.vue'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 
 const route = useRoute()
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const loading = ref(false)
 const error = ref('')
@@ -532,7 +534,7 @@ const isViewerOnly = computed(() => {
 })
 
 const canSeeCertificates = computed(() => {
-  return !isApproverOnly.value && !isViewerOnly.value
+  return !isApproverOnly.value
 })
 
 const canViewWorkflowDetails = computed(() => !isViewerOnly.value)
@@ -579,7 +581,6 @@ const employeePosition = computed(() => employee.value?.currentPosition || '')
 const employeeAreaCode = computed(() => employee.value?.areaCode || '')
 const employeeEducationalLevel = computed(() => employee.value?.educationalLevel || '')
 const employeeActive = computed(() => employee.value?.active ?? true)
-const employeeCurrentlyActive = computed(() => employee.value?.currentlyActive ?? true)
 
 const resolveEvaluationDate = (document, analysis = {}) => {
   const fields = analysis.extractedFields || {}
@@ -957,7 +958,12 @@ const analyzeHistoricalResult = async (item) => {
 const deleteEvaluationDocument = async (item) => {
   if (!(auth.isAdmin || auth.isSuperAdmin || auth.isOperator) || !item?.id) return
 
-  const confirmed = window.confirm(`Seguro que deseas eliminar el PDF ${item.originalFileName || ''}? Esta accion borra el soporte y su analisis.`)
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar evaluación',
+    message: `¿Seguro que deseas eliminar el PDF ${item.originalFileName || ''}? Esta accion borra el soporte y su analisis.`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
   if (!confirmed) return
 
   try {

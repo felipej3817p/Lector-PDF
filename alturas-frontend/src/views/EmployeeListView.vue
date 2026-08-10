@@ -13,10 +13,20 @@
         <button
           type="button"
           class="secondary-btn"
-          :disabled="loading"
+          :disabled="loading || globalAnalyzing"
           @click="loadData"
         >
           {{ loading ? 'Actualizando...' : 'Actualizar' }}
+        </button>
+
+        <button
+          v-if="auth.canUploadDocuments && !isViewerOnly"
+          type="button"
+          class="secondary-btn"
+          :disabled="globalAnalyzing"
+          @click="analyzeAllGlobal"
+        >
+          {{ globalAnalyzing ? globalAnalyzeProgress : 'Reevaluar todos (Global)' }}
         </button>
 
         <RouterLink
@@ -233,28 +243,70 @@
               </div>
             </div>
 
+            <div v-if="auth.canWriteEmployees && selectedIds.length > 0" class="bulk-actions-panel">
+              <div class="bulk-info">
+                <strong>{{ selectedIds.length }}</strong>
+                <span>
+                  trabajador{{ selectedIds.length === 1 ? '' : 'es' }}
+                  seleccionado{{ selectedIds.length === 1 ? '' : 's' }}
+                </span>
+              </div>
+
+              <div class="bulk-actions">
+                <button
+                  type="button"
+                  class="secondary-btn compact-action-btn"
+                  @click="toggleSelectVisible"
+                  :disabled="bulkLoading"
+                >
+                  {{ allVisibleSelected ? 'Quitar visibles' : 'Seleccionar visibles' }}
+                </button>
+
+                <details class="row-actions-menu bulk-delete-menu">
+                  <summary class="compact-action-btn">
+                    Eliminar masivamente
+                  </summary>
+                  <div class="row-actions-menu__content">
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('employees')">Borrar trabajadores</button>
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('evaluations')">Borrar evaluaciones</button>
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('historical')">Borrar historial</button>
+                    <button type="button" class="danger-menu-item" @click="executeBulkDelete('certificates')">Borrar constancias</button>
+                  </div>
+                </details>
+              </div>
+            </div>
+
             <div class="table-fit-wrapper">
               <table class="table table-hover align-middle tracking-table">
                 <colgroup>
+                  <col v-if="auth.canWriteEmployees" class="col-select" style="width: 48px;" />
                   <col class="col-document" />
                   <col class="col-worker" />
                   <col class="col-zone" />
                   <col class="col-result" />
                   <col v-if="canViewWorkflowDetails" class="col-review" />
                   <col v-if="canViewWorkflowDetails" class="col-notification" />
-                  <col v-if="!isViewerOnly" class="col-date" />
+                  <col class="col-date" />
                   <col class="col-actions" />
                 </colgroup>
 
                 <thead>
                   <tr>
+                    <th v-if="auth.canWriteEmployees" class="text-center">
+                      <input
+                        type="checkbox"
+                        :checked="allVisibleSelected"
+                        @change="toggleSelectVisible"
+                        :disabled="bulkLoading"
+                      />
+                    </th>
                     <th>Cedula</th>
                     <th>Trabajador</th>
                     <th>Zona</th>
                     <th>Resultado</th>
                     <th v-if="canViewWorkflowDetails">Revision</th>
                     <th v-if="canViewWorkflowDetails">Notificacion</th>
-                    <th v-if="!isViewerOnly">Fecha evaluacion</th>
+                    <th>Fecha evaluacion</th>
                     <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -266,9 +318,18 @@
                     :class="{
                       'row-critical': row.resultStatus === 'NO_APTO',
                       'row-pending': row.reviewStatus === 'PENDING_REVIEW',
-                      'row-expired': row.evaluationExpired
+                      'row-expired': row.evaluationExpired,
+                      'row-selected': selectedIds.includes(row.employee.id)
                     }"
                   >
+                    <td v-if="auth.canWriteEmployees" class="text-center">
+                      <input
+                        type="checkbox"
+                        :checked="selectedIds.includes(row.employee.id)"
+                        @change="toggleSelected(row.employee.id)"
+                        :disabled="bulkLoading"
+                      />
+                    </td>
                     <td>
                       <strong class="document-cell">{{ documentLabel(row.employee) }}</strong>
                     </td>
@@ -305,7 +366,7 @@
                       </span>
                     </td>
 
-                    <td v-if="!isViewerOnly">
+                    <td>
                       <div class="evaluation-date-cell">
                         <strong>{{ formatDate(row.fechaConcepto || row.uploadedAt) }}</strong>
                         <small v-if="row.evaluationExpired" class="expired-evaluation-note custom-expired-text">
@@ -518,17 +579,17 @@
             <strong>{{ formatDate(selectedRow.employee.birthDate) }}</strong>
           </div>
 
-          <div v-if="!isViewerOnly" class="detail-field">
+          <div class="detail-field">
             <span>Ultima evaluacion</span>
             <strong>{{ formatDate(selectedRow.fechaConcepto) }}</strong>
           </div>
 
-          <div v-if="!isViewerOnly" class="detail-field">
+          <div class="detail-field">
             <span>Vigencia evaluacion</span>
             <strong>{{ selectedRow.evaluationExpired ? 'Vencida' : selectedRow.documentId ? 'Vigente' : 'Sin evaluacion' }}</strong>
           </div>
 
-          <div v-if="!isViewerOnly" class="detail-field">
+          <div class="detail-field">
             <span>Fecha de carga</span>
             <strong>{{ formatDate(selectedRow.uploadedAt) }}</strong>
           </div>
@@ -875,10 +936,11 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { getEmployees } from '../api/employee'
-import { getDocuments } from '../api/document'
+import { getEmployees, deleteBulkEmployees, deleteBulkEvaluations, deleteBulkHistorical, deleteBulkCertificates } from '../api/employee'
+import { getDocuments, analyzeDocument } from '../api/document'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
 import {
   PRIMARY_AREA_OPTIONS,
   areaLabel,
@@ -889,6 +951,7 @@ import {
 } from '../utils/areaCatalog'
 
 const auth = useAuthStore()
+const ui = useUIStore()
 
 const areaOptions = computed(() => PRIMARY_AREA_OPTIONS)
 
@@ -932,8 +995,8 @@ const canViewWorkflowDetails = computed(() => !isViewerOnly.value)
 const canOpenDocumentFiles = computed(() => !isViewerOnly.value)
 
 const employeeTableColspan = computed(() => {
-  if (isViewerOnly.value) return 4
-  return canViewWorkflowDetails.value ? 8 : 6
+  if (isViewerOnly.value) return 5
+  return canViewWorkflowDetails.value ? 9 : 7
 })
 
 const employees = ref([])
@@ -944,6 +1007,9 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000
 
 const loading = ref(false)
 const error = ref('')
+
+const globalAnalyzing = ref(false)
+const globalAnalyzeProgress = ref('')
 
 const search = ref(sessionStorage.getItem('emp_search') || '')
 const areaFilter = ref(sessionStorage.getItem('emp_area') || '')
@@ -959,6 +1025,59 @@ const pageSize = ref(Number(sessionStorage.getItem('emp_size')) || 15)
 const currentPage = ref(Number(sessionStorage.getItem('emp_page')) || 1)
 
 const isInitializing = ref(true)
+
+const analyzeAllGlobal = async () => {
+  if (isViewerOnly.value || !auth.canUploadDocuments) return
+
+  const confirmed = await ui.showConfirm({
+    title: 'Reevaluar documentos',
+    message: '¿Seguro que deseas reevaluar TODOS los PDFs del sistema?\n\nEsto procesará los documentos de todos los trabajadores uno por uno y puede tomar varios minutos. Por favor no cierres la pestaña.',
+    confirmText: 'Sí, reevaluar',
+    type: 'warning'
+  })
+  if (!confirmed) return
+
+  globalAnalyzing.value = true
+  globalAnalyzeProgress.value = 'Iniciando...'
+  error.value = ''
+
+  try {
+    const { data: allDocs } = await getDocuments({ historical: true })
+    const docsWithId = (allDocs || []).filter(d => d.id)
+
+    if (!docsWithId.length) {
+      globalAnalyzing.value = false
+      ui.showAlert({
+        title: 'Atención',
+        message: 'No hay documentos en el sistema para reevaluar.',
+        type: 'info'
+      })
+      return
+    }
+
+    for (let i = 0; i < docsWithId.length; i++) {
+      globalAnalyzeProgress.value = `Reevaluando... (${i + 1}/${docsWithId.length})`
+      try {
+        await analyzeDocument(docsWithId[i].id)
+      } catch (err) {
+        console.warn(`Error al reevaluar el documento ${docsWithId[i].id}:`, err)
+      }
+    }
+
+    globalAnalyzeProgress.value = '¡Completado!'
+    setTimeout(() => {
+      globalAnalyzing.value = false
+    }, 2000)
+
+    // Es importante asegurarse de que loadData está definido o recargar los empleados
+    if (typeof loadData === 'function') {
+      await loadData()
+    }
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'Ocurrió un error al cargar o reevaluar los documentos globales.'
+    globalAnalyzing.value = false
+  }
+}
 
 watch(currentPage, (val) => sessionStorage.setItem('emp_page', val))
 watch(pageSize, (val) => sessionStorage.setItem('emp_size', val))
@@ -1393,6 +1512,87 @@ const resetFilters = () => {
   closeAllActionMenus()
 }
 
+const selectedIds = ref([])
+const bulkLoading = ref(false)
+
+const allVisibleSelected = computed(() => {
+  if (!paginatedRows.value.length) return false
+  return paginatedRows.value.every((row) => selectedIds.value.includes(row.employee.id))
+})
+
+const toggleSelected = (id) => {
+  const index = selectedIds.value.indexOf(id)
+  if (index === -1) {
+    selectedIds.value.push(id)
+  } else {
+    selectedIds.value.splice(index, 1)
+  }
+}
+
+const toggleSelectVisible = () => {
+  if (allVisibleSelected.value) {
+    paginatedRows.value.forEach((row) => {
+      const index = selectedIds.value.indexOf(row.employee.id)
+      if (index !== -1) {
+        selectedIds.value.splice(index, 1)
+      }
+    })
+  } else {
+    paginatedRows.value.forEach((row) => {
+      if (!selectedIds.value.includes(row.employee.id)) {
+        selectedIds.value.push(row.employee.id)
+      }
+    })
+  }
+}
+
+const executeBulkDelete = async (type) => {
+  if (!selectedIds.value.length) return
+
+  const typeLabels = {
+    employees: 'trabajadores',
+    evaluations: 'evaluaciones',
+    historical: 'historiales',
+    certificates: 'constancias'
+  }
+  const label = typeLabels[type] || 'registros'
+
+  const confirmed = await ui.showConfirm({
+    title: `Eliminar masivamente`,
+    message: `¿Deseas eliminar permanentemente los/las ${label} de ${selectedIds.value.length} trabajador${selectedIds.value.length === 1 ? '' : 'es'} seleccionado${selectedIds.value.length === 1 ? '' : 's'}? ¡Esta acción no se puede deshacer!`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
+
+  if (!confirmed) return
+
+  try {
+    bulkLoading.value = true
+    error.value = ''
+
+    if (type === 'employees') {
+      await deleteBulkEmployees(selectedIds.value)
+    } else if (type === 'evaluations') {
+      await deleteBulkEvaluations(selectedIds.value)
+    } else if (type === 'historical') {
+      await deleteBulkHistorical(selectedIds.value)
+    } else if (type === 'certificates') {
+      await deleteBulkCertificates(selectedIds.value)
+    }
+
+    selectedIds.value = []
+    await loadData()
+    employeeSuccessMessage.value = 'Eliminación masiva completada correctamente.'
+    setTimeout(() => {
+      employeeSuccessMessage.value = ''
+    }, 4000)
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'Error durante la eliminación masiva.'
+  } finally {
+    bulkLoading.value = false
+  }
+}
+
 const openEmployeeModal = (row) => {
   selectedRow.value = row
 }
@@ -1525,9 +1725,12 @@ const deleteEmployeeRecord = async (employee) => {
   if (!auth.canWriteEmployees || !employee?.id) return
 
   const workerName = fullName(employee) || documentLabel(employee) || 'este trabajador'
-  const confirmed = window.confirm(
-    `Seguro que quieres eliminar a ${workerName}? Si tiene PDFs o evaluaciones asociadas, tambien se eliminaran del historial.`
-  )
+  const confirmed = await ui.showConfirm({
+    title: 'Eliminar trabajador',
+    message: `¿Seguro que quieres eliminar a ${workerName}? Si tiene PDFs o evaluaciones asociadas, tambien se eliminaran del historial.`,
+    confirmText: 'Sí, eliminar',
+    type: 'danger'
+  })
 
   if (!confirmed) return
 
@@ -1589,7 +1792,11 @@ const viewPdf = async (documentId) => {
   } catch (err) {
     if (pdfWindow) pdfWindow.close()
     console.error('Error abriendo PDF:', err)
-    alert('No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.')
+    ui.showAlert({
+      title: 'Error',
+      message: 'No se pudo abrir el PDF. Es posible que el archivo no exista o no tengas permisos.',
+      type: 'error'
+    })
   }
 }
 
@@ -1854,6 +2061,40 @@ onBeforeUnmount(() => {
   padding: 0.4rem 0.7rem;
 }
 
+.bulk-actions-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.bulk-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.bulk-info strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.compact-action-btn {
+  min-height: 34px;
+  padding: 0.42rem 0.62rem;
+  font-size: 0.76rem;
+}
+
 .table-fit-wrapper {
   width: 100%;
   overflow: visible;
@@ -2095,6 +2336,27 @@ onBeforeUnmount(() => {
   color: #7f1d1d;
   border-color: #fca5a5;
   background: #ffe4e6;
+}
+
+.bulk-delete-menu summary {
+  color: #991b1b !important;
+  border-color: #fecaca !important;
+  background: #fff1f2 !important;
+  min-height: 34px !important;
+  padding: 0.42rem 0.62rem !important;
+  font-size: 0.76rem !important;
+  border-radius: 12px !important;
+}
+
+.bulk-delete-menu summary:hover,
+.bulk-delete-menu[open] summary {
+  color: #7f1d1d !important;
+  border-color: #fca5a5 !important;
+  background: #ffe4e6 !important;
+}
+
+.bulk-delete-menu summary::after {
+  border-color: #991b1b !important;
 }
 
 .google-pagination {
