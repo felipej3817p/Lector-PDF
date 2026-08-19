@@ -1,4 +1,16 @@
 <template>
+  <div class="global-top-actions fixed-global" v-if="isAuthPage">
+    <button
+      type="button"
+      class="icon-action-btn"
+      @click="uiStore.toggleTheme"
+      title="Cambiar tema"
+    >
+      <svg v-if="uiStore.isDarkTheme" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+  </div>
+
   <RouterView v-if="isAuthPage" />
 
   <div v-else class="app-shell">
@@ -7,29 +19,6 @@
     <main class="app-main">
       <RouterView />
     </main>
-
-    <div class="modal-overlay" v-if="authStore.user?.mustChangePassword">
-      <div class="modal-content">
-        <h2>Cambio de Contraseña Obligatorio</h2>
-        <p>Por razones de seguridad, debes actualizar tu contraseña generada temporalmente antes de continuar.</p>
-        
-        <div class="form-group">
-          <label class="label">Nueva Contraseña</label>
-          <input type="password" class="input" v-model="newPassword" placeholder="Al menos 6 caracteres" />
-        </div>
-        
-        <div class="form-group">
-          <label class="label">Confirmar Contraseña</label>
-          <input type="password" class="input" v-model="confirmPassword" />
-        </div>
-
-        <p class="error-msg" v-if="passwordError">{{ passwordError }}</p>
-
-        <div class="modal-actions">
-          <button class="primary-btn" @click="changePassword" :disabled="isChangingPassword">Guardar Contraseña</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <GlobalModals />
@@ -42,18 +31,12 @@ import AppNavbar from './components/AppNavbar.vue'
 import GlobalModals from './components/GlobalModals.vue'
 import { useAuthStore } from './stores/auth'
 import { useUIStore } from './stores/ui'
-import http from './api/http'
 
 const route = useRoute()
 const authStore = useAuthStore()
 const uiStore = useUIStore()
 
 uiStore.initTheme()
-
-const newPassword = ref('')
-const confirmPassword = ref('')
-const passwordError = ref('')
-const isChangingPassword = ref(false)
 
 const isAuthPage = computed(() => {
   return (
@@ -62,40 +45,6 @@ const isAuthPage = computed(() => {
     route.path === '/reset-password'
   )
 })
-
-const changePassword = async () => {
-  passwordError.value = ''
-  
-  if (newPassword.value.length < 6) {
-    passwordError.value = 'La contraseña debe tener al menos 6 caracteres.'
-    return
-  }
-  
-  if (newPassword.value !== confirmPassword.value) {
-    passwordError.value = 'Las contraseñas no coinciden.'
-    return
-  }
-
-  try {
-    isChangingPassword.value = true
-    await http.post('/api/auth/change-password', {
-      newPassword: newPassword.value
-    })
-    
-    // Update store state so modal disappears
-    if (authStore.user) {
-      authStore.user.mustChangePassword = false
-      authStore.setSession(authStore.token, authStore.user)
-    }
-    
-    newPassword.value = ''
-    confirmPassword.value = ''
-  } catch (error) {
-    passwordError.value = error.response?.data?.message || 'Error al cambiar contraseña.'
-  } finally {
-    isChangingPassword.value = false
-  }
-}
 </script>
 
 <style scoped>
@@ -147,5 +96,49 @@ const changePassword = async () => {
   display: flex;
   justify-content: flex-end;
   margin-top: 1.5rem;
+}
+
+.app-main {
+  position: relative;
+}
+
+.global-top-actions {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 50;
+}
+
+.fixed-global {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+.icon-action-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  transition: 0.2s ease;
+  cursor: pointer;
+}
+
+.icon-action-btn:hover {
+  border-color: rgba(62, 207, 142, 0.4);
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+.icon-action-btn--logout:hover {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 </style>

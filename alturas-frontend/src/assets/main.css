@@ -332,7 +332,8 @@ textarea:disabled {
   color: var(--text);
 }
 
-.sidebar-icon-action--logout:hover {
+.sidebar-icon-action--logout:hover,
+.sidebar-icon-action--logout-icon:hover {
   border-color: rgba(194, 65, 65, 0.34);
   background: var(--danger-soft);
   color: var(--danger);

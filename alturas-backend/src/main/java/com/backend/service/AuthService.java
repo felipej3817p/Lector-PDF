@@ -141,6 +141,10 @@ public class AuthService {
 
         String token = jwtService.generateToken(user.getUsername(), authorities);
 
+        if (user.getLastLoginAt() == null) {
+            user.setMustChangePassword(true);
+        }
+
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 

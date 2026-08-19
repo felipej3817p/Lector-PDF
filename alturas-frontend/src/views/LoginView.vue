@@ -27,16 +27,22 @@
           </div>
         </div>
 
-        <div class="mb-4">
+        <div class="mb-4" v-if="!isChangingPasswordState">
           <h1 class="title mb-2">Iniciar sesión</h1>
           <p class="subtitle mb-0">
             Accede al seguimiento de trabajadores, carga de evaluaciones y revisión de conceptos médicos.
           </p>
         </div>
+        <div class="mb-4" v-else>
+          <h1 class="title mb-2">Cambio Obligatorio</h1>
+          <p class="subtitle mb-0">
+            Por seguridad, debes actualizar tu contraseña generada temporalmente antes de continuar.
+          </p>
+        </div>
 
         <div class="hr"></div>
 
-        <form class="d-flex flex-column gap-3" @submit.prevent="onSubmit">
+        <form v-if="!isChangingPasswordState" class="d-flex flex-column gap-3" @submit.prevent="onSubmit">
           <div class="field">
             <label class="label" for="identifier">Usuario o correo</label>
             <input
@@ -86,6 +92,10 @@
             </RouterLink>
           </div>
 
+          <div v-if="successMessage" class="state-box success" style="color: var(--success); background: var(--success-soft); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(62,207,142,0.34); font-size: 0.85rem; text-align: center;">
+            {{ successMessage }}
+          </div>
+
           <div v-if="error" class="state-box error">
             {{ error }}
           </div>
@@ -101,6 +111,43 @@
               aria-hidden="true"
             ></span>
             {{ loading ? 'Ingresando...' : 'Ingresar al sistema' }}
+          </button>
+        </form>
+
+        <form v-else class="d-flex flex-column gap-3" @submit.prevent="onSubmitChangePassword">
+          <div class="field">
+            <label class="label">Nueva Contraseña</label>
+            <input
+              type="password"
+              v-model="newPassword"
+              class="input"
+              placeholder="Al menos 6 caracteres"
+              :disabled="loading"
+            />
+          </div>
+
+          <div class="field">
+            <label class="label">Confirmar Contraseña</label>
+            <input
+              type="password"
+              v-model="confirmPassword"
+              class="input"
+              placeholder="Confirmar"
+              :disabled="loading"
+            />
+          </div>
+
+          <div v-if="error" class="state-box error">
+            {{ error }}
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary w-100"
+            :disabled="loading || !canSubmitChangePassword"
+          >
+            <span v-if="loading" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            {{ loading ? 'Guardando...' : 'Guardar y Continuar' }}
           </button>
         </form>
 
@@ -126,16 +173,22 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import http from '../api/http'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+
+const isChangingPasswordState = ref(false)
+const newPassword = ref('')
+const confirmPassword = ref('')
 
 const identifier = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
+const successMessage = ref('')
 const passwordRef = ref(null)
 
 const canSubmit = computed(() => {
@@ -151,6 +204,9 @@ const focusPassword = () => {
 }
 
 onMounted(() => {
+  if (auth.user?.mustChangePassword) {
+    isChangingPasswordState.value = true
+  }
   identifier.value = ''
   password.value = ''
 })
@@ -210,10 +266,16 @@ const onSubmit = async () => {
   if (!canSubmit.value || loading.value) return
 
   error.value = ''
+  successMessage.value = ''
   loading.value = true
 
   try {
     await auth.login(identifier.value, password.value)
+
+    if (auth.user?.mustChangePassword) {
+      isChangingPasswordState.value = true
+      return
+    }
 
     const redirect = typeof route.query.redirect === 'string'
       ? route.query.redirect
@@ -241,6 +303,45 @@ const onSubmit = async () => {
     } else {
       error.value = 'No pudimos iniciar sesión en este momento. Intenta nuevamente o comunícate con soporte si el problema continúa.'
     }
+  } finally {
+    loading.value = false
+  }
+}
+
+const canSubmitChangePassword = computed(() => {
+  return newPassword.value.length >= 6 && confirmPassword.value.length > 0
+})
+
+const onSubmitChangePassword = async () => {
+  if (newPassword.value.length < 6) {
+    error.value = 'La contraseña debe tener al menos 6 caracteres.'
+    return
+  }
+  
+  if (newPassword.value !== confirmPassword.value) {
+    error.value = 'Las contraseñas no coinciden.'
+    return
+  }
+
+  error.value = ''
+  successMessage.value = ''
+  loading.value = true
+
+  try {
+    await http.post('/api/auth/change-password', {
+      newPassword: newPassword.value
+    })
+    
+    auth.logout()
+
+    password.value = ''
+    newPassword.value = ''
+    confirmPassword.value = ''
+    isChangingPasswordState.value = false
+    
+    successMessage.value = 'Contraseña actualizada correctamente. Por favor inicia sesión con tu nueva contraseña.'
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Error al cambiar contraseña.'
   } finally {
     loading.value = false
   }

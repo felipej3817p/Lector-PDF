@@ -38,6 +38,7 @@ const getAuthSnapshot = () => {
   const isApprover = roles.includes('APROBADOR')
   const isOperator = roles.includes('OPERADOR')
   const isViewer = roles.includes('VISUALIZADOR')
+  const mustChangePassword = Boolean(user?.mustChangePassword)
 
   return {
     token,
@@ -48,6 +49,7 @@ const getAuthSnapshot = () => {
     isApprover,
     isOperator,
     isViewer,
+    mustChangePassword,
     canReviewDocuments: isAdmin || isApprover,
     canManageSettings: Boolean(token),
     canUploadDocuments: isAdmin || isOperator,
@@ -252,6 +254,7 @@ router.beforeEach((to, from, next) => {
     roles,
     isAdmin,
     isApprover,
+    mustChangePassword,
     canReviewDocuments,
     canUploadDocuments,
     canWriteEmployees,
@@ -264,11 +267,15 @@ router.beforeEach((to, from, next) => {
     return next()
   }
 
+  if (mustChangePassword && to.path !== '/login') {
+    return next('/login')
+  }
+
   if (to.meta.requiresAuth && !token) {
     return next('/login')
   }
 
-  if (to.meta.guestOnly && token) {
+  if (to.meta.guestOnly && token && !mustChangePassword) {
     return next(defaultRouteForRoles(roles))
   }
 
