@@ -205,7 +205,9 @@ const focusPassword = () => {
 
 onMounted(() => {
   if (auth.user?.mustChangePassword) {
-    isChangingPasswordState.value = true
+    // Si el usuario presiona F5 estando atrapado aquí, cerramos su sesión parcial
+    auth.logout()
+    isChangingPasswordState.value = false
   }
   identifier.value = ''
   password.value = ''

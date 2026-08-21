@@ -727,7 +727,9 @@
                     <input
                       type="checkbox"
                       :checked="hasRoleAssignment(role)"
-                      :disabled="saving"
+                      :disabled="saving || 
+                        (role !== 'ADMIN' && hasRoleAssignment('ADMIN')) ||
+                        (role === 'VISUALIZADOR' && (hasRoleAssignment('APROBADOR') || hasRoleAssignment('OPERADOR')))"
                       @change="toggleRoleAssignment(role)"
                     />
                     <span>{{ displayRole(role) }}</span>
@@ -1613,6 +1615,14 @@ const toggleRoleAssignment = (role) => {
       ...form.roleAssignments,
       { role: normalizedRole, startDate: '', endDate: '', enabled: true }
     ]
+    
+    if (normalizedRole === 'ADMIN') {
+      // Remove other roles so they appear unchecked, greyed out, and without date pickers
+      form.roleAssignments = form.roleAssignments.filter(r => r.role === 'ADMIN' || r.role === 'SUPER_ADMIN')
+    } else if (normalizedRole === 'APROBADOR' || normalizedRole === 'OPERADOR') {
+      // Remove visualizador if a higher role is selected
+      form.roleAssignments = form.roleAssignments.filter(r => r.role !== 'VISUALIZADOR')
+    }
   }
 
   syncRoleCodes()
